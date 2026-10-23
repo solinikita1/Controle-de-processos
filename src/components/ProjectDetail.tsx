@@ -1,3 +1,4 @@
+import {CreationFlow} from './CreationFlow';
 import React, { useState, useMemo } from 'react';
 import { Project, Task, TeamMember, TaskPriority, TaskStatus, ArchitecturePhase } from '../types';
 import { ARCHITECTURE_PHASES } from '../data/mockData';
@@ -74,6 +75,8 @@ interface ProjectDetailProps {
   onEditBriefing?: (project: Project) => void;
   onAdvanceToNextPhase?: (project: Project) => void;
   onAdvanceToPhase?: (project: Project, phase: ArchitecturePhase) => void;
+  onUpdateProject: (project: Project) => Promise<boolean>;
+  actor: string;
   onOpenAwardModal?: (project: Project) => void;
   onDeleteProject?: (projectId: string) => void;
   onToggleArchiveProject?: (projectId: string) => void;
@@ -100,6 +103,8 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
   onAdvanceToNextPhase,
   onAdvanceToPhase,
   onOpenAwardModal,
+  onUpdateProject,
+  actor,
   onDeleteProject,
   onToggleArchiveProject,
   onDuplicateProject,
@@ -767,113 +772,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
             </div>
           )}
 
-          {/* BANNER B: Área de Projeto de Criação (3 Etapas) */}
-          {(project.currentPhase === 'criacao_conceitual' ||
-            project.currentPhase === 'criacao_orcamento' ||
-            project.currentPhase === 'criacao_apresentacao' ||
-            project.currentPhase === 'estudo_preliminar' ||
-            project.currentPhase === 'anteprojeto') && (
-            <div className="p-4 rounded-xl bg-purple-50 border border-purple-200 flex flex-col gap-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-purple-600 text-white rounded-xl shadow-xs shrink-0">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-xs font-bold text-purple-950">
-                        Área de Projeto de Criação (3 Etapas Pré-Award)
-                      </h4>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-200 text-purple-900 uppercase">
-                        Em Desenvolvimento Criativo
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-purple-800 mt-0.5">
-                      Desenvolvimento do projeto conceitual, elaboração da planilha orçamentária do cliente e apresentação integrada dos 2 conteúdos.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {onOpenAwardModal && (
-                    <button
-                      type="button"
-                      onClick={() => onOpenAwardModal(project)}
-                      className="px-4 py-2 text-xs font-bold text-white bg-linear-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 rounded-lg shadow-sm transition-all flex items-center gap-1.5"
-                    >
-                      <Trophy className="w-4 h-4 text-amber-100" />
-                      <span>🏆 Registrar Award (Cliente Comprou)</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* 3 Etapas da Criação Pills */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-purple-200/80">
-                
-                {/* 2.1 Projeto Conceitual */}
-                <div
-                  onClick={() => onAdvanceToPhase && onAdvanceToPhase(project, 'criacao_conceitual')}
-                  className={`p-2.5 rounded-lg border text-xs cursor-pointer transition-all ${
-                    project.currentPhase === 'criacao_conceitual' || project.currentPhase === 'estudo_preliminar'
-                      ? 'bg-white border-purple-400 font-bold text-purple-950 shadow-2xs'
-                      : 'bg-purple-100/60 border-purple-200 text-purple-900 hover:bg-white'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span>2.1 Projeto Conceitual</span>
-                    {(project.currentPhase === 'criacao_conceitual' || project.currentPhase === 'estudo_preliminar') && (
-                      <span className="w-2 h-2 rounded-full bg-purple-600 animate-ping" />
-                    )}
-                  </div>
-                  <div className="text-[10px] text-purple-700 font-normal mt-0.5">
-                    Layout espacial, volumetria 3D, salas acústicas e wellness.
-                  </div>
-                </div>
-
-                {/* 2.2 Orçamento do Cliente */}
-                <div
-                  onClick={() => onAdvanceToPhase && onAdvanceToPhase(project, 'criacao_orcamento')}
-                  className={`p-2.5 rounded-lg border text-xs cursor-pointer transition-all ${
-                    project.currentPhase === 'criacao_orcamento' || project.currentPhase === 'anteprojeto'
-                      ? 'bg-white border-purple-400 font-bold text-purple-950 shadow-2xs'
-                      : 'bg-purple-100/60 border-purple-200 text-purple-900 hover:bg-white'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span>2.2 Orçamento do Cliente</span>
-                    {(project.currentPhase === 'criacao_orcamento' || project.currentPhase === 'anteprojeto') && (
-                      <span className="w-2 h-2 rounded-full bg-purple-600 animate-ping" />
-                    )}
-                  </div>
-                  <div className="text-[10px] text-purple-700 font-normal mt-0.5">
-                    Planilha orçamentária, estimativa de CAPEX e marcenaria.
-                  </div>
-                </div>
-
-                {/* 2.3 Apresentação dos 2 Conteúdos */}
-                <div
-                  onClick={() => onAdvanceToPhase && onAdvanceToPhase(project, 'criacao_apresentacao')}
-                  className={`p-2.5 rounded-lg border text-xs cursor-pointer transition-all ${
-                    project.currentPhase === 'criacao_apresentacao'
-                      ? 'bg-white border-purple-400 font-bold text-purple-950 shadow-2xs'
-                      : 'bg-purple-100/60 border-purple-200 text-purple-900 hover:bg-white'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span>2.3 Apresentação (2 Conteúdos)</span>
-                    {project.currentPhase === 'criacao_apresentacao' && (
-                      <span className="w-2 h-2 rounded-full bg-purple-600 animate-ping" />
-                    )}
-                  </div>
-                  <div className="text-[10px] text-purple-700 font-normal mt-0.5">
-                    Defesa integrada (Conceito + Orçamento) para fechar o Award.
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          )}
+          {(project.creationRounds?.length || ['criacao_conceitual','criacao_orcamento','criacao_apresentacao','estudo_preliminar','anteprojeto'].includes(project.currentPhase)) && <CreationFlow key={project.id} project={project} team={allTeamMembers} actor={actor} onSave={onUpdateProject} onAward={project.award?.status !== 'awarded' && onOpenAwardModal ? ()=>onOpenAwardModal(project) : undefined} />}
 
           {/* BANNER C: PROJETO EXECUTIVO (Pós-Award - 4 Pilares Obrigatórios) */}
           {(project.award?.status === 'awarded' ||

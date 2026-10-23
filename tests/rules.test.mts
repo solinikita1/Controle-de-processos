@@ -204,3 +204,10 @@ test("editor restore is rejected atomically without deleting existing projects",
     true,
   );
 });
+
+test('creation history persists and synchronizes to another corporate reader',async()=>{
+ const rounds=[{number:0,scope:'initial',request:'Proposta inicial',state:'waiting',events:[{id:'event-1',at:'2026-10-23T12:00:00Z',by:'user@workplace.arq.br',action:'send',date:'2026-10-23',note:'Apresentação enviada',link:'',recipient:'cliente@example.com',followUp:'2026-10-26'}]}];
+ await assertSucceeds(batchWrite(database('editor'),'editor','projects/new',{...project,creationRounds:rounds}));
+ const snapshot=await assertSucceeds(getDoc(doc(database('coworker'),'projects/new')));
+ assert.deepEqual(snapshot.data()!.creationRounds,rounds);
+});

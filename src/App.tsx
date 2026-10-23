@@ -589,7 +589,7 @@ export default function App() {
     const nextProjects = projects.map((p) => (p.id === updatedProject.id ? updatedProject : p));
     updateProjects(nextProjects);
     saveProjectToCloud(updatedProject);
-    showToast(`Prioridade do projeto "${updatedProject.code}" atualizada.`);
+    showToast(`Projeto "${updatedProject.code}" atualizado.`);
   });
 
   // --- Handlers: Tasks ---
@@ -844,6 +844,8 @@ export default function App() {
         {/* VIEW 4: PROJECT DETAIL */}
         {currentView === 'project' && currentProject && (
           <ProjectDetail
+            onUpdateProject={handleUpdateProjectSingle}
+            actor={currentUser.email}
             project={currentProject}
             tasks={tasks}
             allTeamMembers={teamMembers}
