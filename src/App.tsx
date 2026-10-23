@@ -906,7 +906,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="py-1 px-3 rounded-xl bg-stone-900 border border-stone-800 flex items-center justify-center shadow-inner">
-              <WorkplaceLogo variant="horizontal" theme="dark" height={38} />
+              <WorkplaceLogo variant="horizontal" theme="dark" height={96} />
             </div>
             <div className="hidden sm:block border-l border-stone-800 pl-4">
               <div className="text-xs font-bold text-white tracking-wide">

@@ -138,9 +138,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <button
               type="button"
               onClick={onNewBriefing}
-              className="px-3.5 py-2 text-xs font-bold text-pink-900 bg-pink-50 hover:bg-pink-100 border border-pink-300 rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+              className="px-3.5 py-2 text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
             >
-              <FileDown className="w-3.5 h-3.5 text-pink-600" />
+              <FileDown className="w-3.5 h-3.5 text-amber-600" />
               + Nova Demanda (Briefing)
             </button>
           )}
@@ -280,15 +280,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       />
 
       {/* Esteira de Entrada & Novos Briefings Section */}
-      <div className="bg-white rounded-2xl border border-pink-200 p-5 shadow-xs space-y-4">
+      <div className="bg-white rounded-2xl border border-amber-200 p-5 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 pb-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-pink-600 animate-pulse" />
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse" />
               <h2 className="text-base font-bold text-neutral-900 tracking-tight">
                 Esteira de Entrada & Briefings Comerciais
               </h2>
-              <span className="px-2 py-0.5 text-[10px] font-bold bg-pink-100 text-pink-800 rounded-full border border-pink-200">
+              <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-full border border-amber-200">
                 Fila de Kickoff
               </span>
             </div>
@@ -302,9 +302,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <button
                 type="button"
                 onClick={onNewBriefing}
-                className="px-3 py-1.5 text-xs font-bold text-pink-900 bg-pink-50 hover:bg-pink-100 border border-pink-200 rounded-lg transition-colors flex items-center gap-1.5"
+                className="px-3 py-1.5 text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors flex items-center gap-1.5"
               >
-                <Plus className="w-3.5 h-3.5 text-pink-600" />
+                <Plus className="w-3.5 h-3.5 text-amber-600" />
                 Nova Demanda
               </button>
             )}
@@ -363,7 +363,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
                     {p.briefing && (
                       <div className="text-[10px] text-neutral-500 space-y-0.5 pt-1.5 border-t border-neutral-200/60">
-                        <div className="text-pink-900 font-medium truncate">
+                        <div className="text-amber-900 font-medium truncate">
                           Trazido por: {p.briefing.submittedByName}
                         </div>
                         <div className="text-neutral-400">

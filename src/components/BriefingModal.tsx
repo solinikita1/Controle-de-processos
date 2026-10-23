@@ -311,7 +311,7 @@ export const BriefingModal: React.FC<BriefingModalProps> = ({
         {/* Header with Commercial Ribbon */}
         <div className="px-6 py-4 bg-stone-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-pink-600/90 text-white flex items-center justify-center font-bold shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-amber-600/90 text-white flex items-center justify-center font-bold shadow-xs">
               <FileText className="w-5 h-5" />
             </div>
             <div>
@@ -319,7 +319,7 @@ export const BriefingModal: React.FC<BriefingModalProps> = ({
                 <h3 className="text-base font-bold text-white tracking-tight">
                   {projectToEdit ? 'Editar Briefing Corporativo & Entrada da Demanda' : 'Entrada de Nova Demanda Comercial (Briefing Corporativo)'}
                 </h3>
-                <span className="px-2 py-0.5 text-[10px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30 rounded-full uppercase">
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full uppercase">
                   Exclusivo Arquitetura Corporativa
                 </span>
               </div>
@@ -354,13 +354,13 @@ export const BriefingModal: React.FC<BriefingModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 text-xs flex-1">
           
           {/* SECTION 1: ENTRADA & RASTREAMENTO DA DEMANDA COMERCIAL */}
-          <div className="p-4 rounded-xl bg-pink-50/40 border border-pink-200/80 space-y-4">
+          <div className="p-4 rounded-xl bg-amber-50/40 border border-amber-200/80 space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="font-bold text-pink-950 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-                <Clock className="w-4 h-4 text-pink-600" />
+              <h4 className="font-bold text-amber-950 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                <Clock className="w-4 h-4 text-amber-600" />
                 1. Rastreamento da Entrada Comercial (Head Responsável)
               </h4>
-              <span className="text-[10px] text-pink-700 font-semibold bg-pink-100 px-2 py-0.5 rounded-md">
+              <span className="text-[10px] text-amber-700 font-semibold bg-amber-100 px-2 py-0.5 rounded-md">
                 Registro de Auditoria & Origem
               </span>
             </div>
@@ -373,7 +373,7 @@ export const BriefingModal: React.FC<BriefingModalProps> = ({
                 <select
                   value={headMemberId}
                   onChange={(e) => setHeadMemberId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-medium border border-neutral-300 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-pink-500"
+                  className="w-full px-3 py-2 text-xs font-medium border border-neutral-300 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
                 >
                   {commercialHeads.map((m, idx) => (
                     <option key={`head-opt-${m.id}-${idx}`} value={m.id}>
@@ -399,7 +399,7 @@ export const BriefingModal: React.FC<BriefingModalProps> = ({
                   required
                   value={entryDate}
                   onChange={(e) => setEntryDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-mono border border-neutral-300 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-pink-500"
+                  className="w-full px-3 py-2 text-xs font-mono border border-neutral-300 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
                 />
                 {errors.entryDate && <p className="text-rose-600 mt-1">{errors.entryDate}</p>}
               </div>
@@ -413,7 +413,7 @@ export const BriefingModal: React.FC<BriefingModalProps> = ({
                   placeholder="AAAA-MM-DD HH:MM"
                   value={submittedAtTime}
                   onChange={(e) => setSubmittedAtTime(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-mono border border-neutral-300 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-pink-500"
+                  className="w-full px-3 py-2 text-xs font-mono border border-neutral-300 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
                 />
                 <span className="text-[10px] text-neutral-400">Ex: 2026-10-21 14:30</span>
               </div>
@@ -437,7 +437,7 @@ export const BriefingModal: React.FC<BriefingModalProps> = ({
                   placeholder="https://workplace.sharepoint.com/... ou X:/Projetos/2026/Sede-Cliente"
                   value={folderUrl}
                   onChange={(e) => setFolderUrl(e.target.value)}
-                  className="flex-1 px-3 py-2 text-xs font-mono border border-neutral-300 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-pink-500"
+                  className="flex-1 px-3 py-2 text-xs font-mono border border-neutral-300 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
                 />
                 {folderUrl && (
                   <a

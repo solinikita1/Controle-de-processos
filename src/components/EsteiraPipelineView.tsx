@@ -179,7 +179,7 @@ export const EsteiraPipelineView: React.FC<EsteiraPipelineViewProps> = ({
       id: 'captacao_esteira',
       name: '1. Captação & Esteira',
       icon: FolderOpen,
-      color: 'border-pink-500 bg-pink-50/40 text-pink-900',
+      color: 'border-amber-500 bg-amber-50/40 text-amber-900',
       desc: 'Nova demanda, briefing corporativo e SharePoint',
     },
     {
@@ -212,7 +212,7 @@ export const EsteiraPipelineView: React.FC<EsteiraPipelineViewProps> = ({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-pink-700 bg-pink-50 border border-pink-200 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
               Esteira de Entrada & Briefing Comercial
             </span>
             <span className="w-1 h-1 rounded-full bg-neutral-300" />
@@ -232,7 +232,7 @@ export const EsteiraPipelineView: React.FC<EsteiraPipelineViewProps> = ({
             onClick={onNewBriefing}
             className="px-4 py-2 text-xs font-bold text-white bg-stone-900 hover:bg-stone-800 rounded-lg shadow-sm transition-all flex items-center gap-2 shrink-0 group"
           >
-            <Plus className="w-4 h-4 text-pink-400 group-hover:scale-110 transition-transform" />
+            <Plus className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
             <span>+ Nova Demanda Comercial (Briefing)</span>
           </button>
         </div>
@@ -262,15 +262,15 @@ export const EsteiraPipelineView: React.FC<EsteiraPipelineViewProps> = ({
           <span className="text-[10px] text-rose-500">Prioridade máxima imediata</span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-pink-200/80 shadow-2xs">
-          <div className="flex items-center justify-between text-pink-700 mb-1">
+        <div className="bg-white p-4 rounded-xl border border-amber-200/80 shadow-2xs">
+          <div className="flex items-center justify-between text-amber-700 mb-1">
             <span className="text-xs font-semibold">Em Captação & Briefing</span>
-            <FileText className="w-4 h-4 text-pink-600" />
+            <FileText className="w-4 h-4 text-amber-600" />
           </div>
-          <div className="text-2xl font-black text-pink-600 font-mono tabular-nums">
+          <div className="text-2xl font-black text-amber-600 font-mono tabular-nums">
             {inBriefingCount}
           </div>
-          <span className="text-[10px] text-pink-600">Documentos e pasta de rede</span>
+          <span className="text-[10px] text-amber-600">Documentos e pasta de rede</span>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-emerald-200/80 shadow-2xs">
@@ -469,7 +469,7 @@ export const EsteiraPipelineView: React.FC<EsteiraPipelineViewProps> = ({
                       <div className="flex items-center gap-3 pt-1 text-[11px] text-neutral-500 flex-wrap">
                         {briefing?.submittedByName && (
                           <span className="flex items-center gap-1 text-neutral-700 font-medium">
-                            <Clock className="w-3 h-3 text-pink-600" />
+                            <Clock className="w-3 h-3 text-amber-600" />
                             Trazido por: <strong>{briefing.submittedByName}</strong> em {briefing.submittedAt}
                           </span>
                         )}

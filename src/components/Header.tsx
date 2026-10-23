@@ -86,13 +86,13 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={() => onNavigate('esteira')}
             className={`whitespace-nowrap shrink-0 transition-colors flex items-center gap-1.5 ${
-              currentView === 'esteira' ? 'text-pink-700 font-bold border-b-2 border-pink-600 pb-0.5' : 'text-neutral-700 hover:text-pink-700'
+              currentView === 'esteira' ? 'text-amber-700 font-bold border-b-2 border-amber-600 pb-0.5' : 'text-neutral-700 hover:text-amber-700'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-pink-600" />
+            <span className="w-2 h-2 rounded-full bg-amber-600" />
             <span>Esteira & Briefings</span>
             {briefingCount > 0 && (
-              <span className="px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-pink-100 text-pink-800 border border-pink-200">
+              <span className="px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200">
                 {briefingCount}
               </span>
             )}

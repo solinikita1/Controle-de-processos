@@ -9,3 +9,28 @@
     font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 }
+
+/* Workplace brand palette, sampled from the supplied official artwork. */
+@theme {
+  --color-amber-50: #fffbed;
+  --color-amber-100: #fff3c4;
+  --color-amber-200: #ffe68a;
+  --color-amber-300: #f9d745;
+  --color-amber-400: #f3c103;
+  --color-amber-500: #d5a900;
+  --color-amber-600: #a78000;
+  --color-amber-700: #806100;
+  --color-amber-800: #614b00;
+  --color-amber-900: #443600;
+  --color-amber-950: #292200;
+  --color-stone-900: #131617;
+  --color-stone-950: #0d1011;
+}
+
+header { border-top: 3px solid #f3c103; }
+nav[aria-label="Navegação principal"] button { min-height: 36px; }
+nav[aria-label="Navegação principal"] button[class*="border-b-2"] { border-bottom-color: #f3c103; }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid #806100;
+  outline-offset: 3px;
+}

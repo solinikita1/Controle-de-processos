@@ -42,8 +42,8 @@ export function MicrosoftLoginModal({
         aria-labelledby="login-title"
         className="w-full max-w-md rounded-2xl bg-white shadow-xl overflow-hidden"
       >
-        <div className="bg-stone-900 p-6 flex justify-between items-center">
-          <WorkplaceLogo variant="horizontal" theme="dark" height={36} />
+        <div className="bg-stone-900 p-6 flex justify-center items-center gap-4">
+          <WorkplaceLogo variant="horizontal" theme="dark" height={110} />
           {currentUser && (
             <button
               aria-label="Fechar acesso"
