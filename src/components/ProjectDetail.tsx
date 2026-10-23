@@ -734,7 +734,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                     {isObra && <CheckCircle2 className="w-3.5 h-3.5 text-sky-600" />}
                   </div>
                   <div className="text-[11px] text-neutral-600 leading-tight">
-                    Plantas, Complementares, Condomínio, Seguros.
+                    Arquitetura, Complementares, Condomínio, Seguros.
                   </div>
                 </div>
               );
@@ -871,7 +871,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                     }`}
                   >
                     <div className="flex items-center justify-between text-[11px] font-bold text-sky-900">
-                      <span>3.1 Todas as Plantas</span>
+                      <span>3.1 Projeto Executivo de Arquitetura</span>
                       <FileCheck className="w-3.5 h-3.5 text-sky-600" />
                     </div>
                     <p className="text-[10px] text-neutral-600 mt-0.5">

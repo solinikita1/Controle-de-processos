@@ -93,7 +93,7 @@ export const AwardModal: React.FC<AwardModalProps> = ({
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 pt-1 font-medium text-amber-900">
               <li className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>1. Todas as Plantas</span>
+                <span>1. Projeto Executivo de Arquitetura</span>
               </li>
               <li className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />

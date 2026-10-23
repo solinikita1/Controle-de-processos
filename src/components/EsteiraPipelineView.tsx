@@ -201,7 +201,7 @@ export const EsteiraPipelineView: React.FC<EsteiraPipelineViewProps> = ({
       name: '4. Projeto Executivo (4 Pilares)',
       icon: Layers,
       color: 'border-sky-500 bg-sky-50/40 text-sky-900',
-      desc: 'Plantas, Complementares, Condomínio e Seguros',
+      desc: 'Arquitetura, Complementares, Condomínio e Seguros',
     },
   ];
 

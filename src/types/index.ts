@@ -8,7 +8,7 @@ export type ArchitecturePhase =
   | 'criacao_conceitual'            // 2.1 Projeto de Criação: Projeto Conceitual
   | 'criacao_orcamento'             // 2.2 Projeto de Criação: Orçamento do Cliente
   | 'criacao_apresentacao'          // 2.3 Projeto de Criação: Apresentação (Conceito + Orçamento)
-  | 'executivo_plantas'             // 3.1 Projeto Executivo: Todas as Plantas
+  | 'executivo_plantas'             // 3.1 Projeto Executivo de Arquitetura
   | 'executivo_complementares'      // 3.2 Projeto Executivo: Complementares (Elétrica, Hidráulica, Ar-Condicionado, Incêndio)
   | 'executivo_aprovacao_condominio'// 3.3 Projeto Executivo: Aprovação no Condomínio
   | 'executivo_seguros_documentos'  // 3.4 Projeto Executivo: Seguros & Documentos Obrigatórios do Cliente

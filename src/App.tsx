@@ -1,3 +1,4 @@
+import {membersForPhase} from './utils/teamAreas';
 import {creationRevisionTasks,syncCreationTask} from './utils/creationTasks';
 import { OperationsPanel } from './components/OperationsPanel';
 import React, { useState, useEffect, useRef } from 'react';
@@ -371,7 +372,7 @@ export default function App() {
       criacao_conceitual: '2.1 Criação: Projeto Conceitual',
       criacao_orcamento: '2.2 Criação: Orçamento do Cliente',
       criacao_apresentacao: '2.3 Criação: Apresentação (Conceito + Orçamento)',
-      executivo_plantas: '3.1 Executivo: Todas as Plantas',
+      executivo_plantas: '3.1 Projeto Executivo de Arquitetura',
       executivo_complementares: '3.2 Executivo: Complementares (Engenharias)',
       executivo_aprovacao_condominio: '3.3 Executivo: Aprovação no Condomínio',
       executivo_seguros_documentos: '3.4 Executivo: Seguros & Docs Obrigatórios',
@@ -412,9 +413,10 @@ export default function App() {
 
     if (existingExecutiveTasks.length === 0) {
       // Injetar os 4 pilares obrigatórios da Workplace
-      const defaultResponsible = targetProject.teamMemberIds[0] || teamMembers[0]?.id || 'team-soli';
-      const engResponsible = targetProject.teamMemberIds[1] || defaultResponsible;
-      const adminResponsible = targetProject.teamMemberIds[2] || defaultResponsible;
+      const executiveTeam = membersForPhase(teamMembers, 'executivo_plantas').filter(m => m.department === 'Executivo');
+      const defaultResponsible = executiveTeam[0]?.id || targetProject.teamMemberIds[0] || teamMembers[0]?.id || 'team-soli';
+      const engResponsible = executiveTeam[1]?.id || defaultResponsible;
+      const adminResponsible = defaultResponsible;
 
       const todayStr = new Date().toISOString().slice(0, 10);
       const futureDate = (days: number) => {
@@ -428,7 +430,7 @@ export default function App() {
         {
           id: `task-exec-plantas-${Date.now()}`,
           projectId,
-          title: 'Emissão do Caderno Completo de Plantas Arquitetônicas (Demolição, Construção, Piso Elevado, Forro e Marcenaria)',
+          title: 'Projeto Executivo de Arquitetura',
           description: 'Geração de todas as plantas executivas com cotas finais, paginação de piso, forro acústico, drywall, divisórias de vidro e detalhamento de marcenaria especial.',
           phase: 'executivo_plantas',
           responsibleId: defaultResponsible,

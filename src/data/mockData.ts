@@ -35,8 +35,8 @@ export const ARCHITECTURE_PHASES: ArchitecturePhaseInfo[] = [
   },
   {
     id: 'executivo_plantas',
-    name: '3.1 Executivo: Todas as Plantas',
-    shortName: '3.1 Plantas',
+    name: '3.1 Projeto Executivo de Arquitetura',
+    shortName: '3.1 Arquitetura',
     description: 'Segundo Momento da Esteira (Pós-Award): emissão de todas as plantas de demolição, construção, piso elevado, forro, marcenaria e divisórias.',
     color: '#0EA5E9', // Ciano
     stageGroup: 'executivo'
@@ -100,7 +100,7 @@ export const ARCHITECTURE_PHASES: ArchitecturePhaseInfo[] = [
   },
   {
     id: 'projeto_executivo',
-    name: '3.1 Executivo: Plantas & Complementares',
+    name: '3.1 Projeto Executivo de Arquitetura',
     shortName: '3.1 Executivo',
     description: 'Todas as plantas de arquitetura e projetos complementares.',
     color: '#0EA5E9',
