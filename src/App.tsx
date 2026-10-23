@@ -1,3 +1,4 @@
+import { OperationsPanel } from './components/OperationsPanel';
 import React, { useState, useEffect, useRef } from 'react';
 import { Project, Task, TeamMember, TaskStatus, AuthUser, ProjectAwardInfo, ArchitecturePhase, BackupSnapshot, BackupPayload } from './types';
 import {
@@ -598,6 +599,7 @@ export default function App() {
   };
 
   const handleEditTask = (task: Task) => {
+    setSelectedProjectId(task.projectId);
     setTaskToEdit(task);
     setIsTaskModalOpen(true);
   };
@@ -786,6 +788,7 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 min-w-0 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
+        {currentView === 'overview' && <OperationsPanel projects={projects} tasks={tasks} team={teamMembers} onEditTask={handleEditTask} onSelectProject={handleSelectProject} />}
         {/* VIEW 1: STUDIO OVERVIEW */}
         {currentView === 'overview' && (
           <DashboardOverview

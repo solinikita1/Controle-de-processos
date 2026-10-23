@@ -125,8 +125,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
 
     const updatedTask: Task = {
+      ...taskToEdit,
       id: taskToEdit ? taskToEdit.id : `task-${Date.now()}`,
-      projectId,
+      projectId: taskToEdit?.projectId || projectId,
       title: title.trim(),
       description: description.trim(),
       phase,
@@ -146,7 +147,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   // Combine project team members first, then other studio members
-  const availableMembers = projectTeam.length > 0 ? projectTeam : allTeamMembers;
+  const availableMembers = [...projectTeam, ...allTeamMembers.filter(m => !projectTeam.some(p => p.id === m.id))];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs overflow-y-auto">
