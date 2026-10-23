@@ -9,12 +9,14 @@ service cloud.firestore {
     }
     function member() {
       return corporate()
-        && exists(/databases/$(database)/documents/access/$(request.auth.uid))
-        && get(/databases/$(database)/documents/access/$(request.auth.uid)).data.enabled == true
-        && get(/databases/$(database)/documents/access/$(request.auth.uid)).data.role in ['admin', 'editor'];
+        && (!exists(/databases/$(database)/documents/access/$(request.auth.uid))
+          || get(/databases/$(database)/documents/access/$(request.auth.uid)).data.get('enabled', true) != false);
     }
     function admin() {
-      return member() && get(/databases/$(database)/documents/access/$(request.auth.uid)).data.role == 'admin';
+      return member()
+        && exists(/databases/$(database)/documents/access/$(request.auth.uid))
+        && get(/databases/$(database)/documents/access/$(request.auth.uid)).data.enabled == true
+        && get(/databases/$(database)/documents/access/$(request.auth.uid)).data.role == 'admin';
     }
     function previousRevision() {
       return exists(/databases/$(database)/documents/system/revision)

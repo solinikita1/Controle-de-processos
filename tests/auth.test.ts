@@ -5,6 +5,7 @@ const state = {
   callback: null as any,
   access: { enabled: true, role: "admin", teamMemberId: "team-soli" } as any,
   popup: null as any,
+  team: [] as any[],
 };
 (globalThis as any).__authTest = state;
 const service = await bundleTest(
@@ -20,6 +21,8 @@ const service = await bundleTest(
  `,
     "firebase/firestore": `
  export const doc=(_,collection,id)=>collection+'/'+id;
+ export const collection=(_,name)=>name;
+ export const getDocsFromServer=async()=>({docs:globalThis.__authTest.team.map(m=>({id:m.id,data:()=>m}))});
  export const getDocFromServer=async()=>({exists:()=>!!globalThis.__authTest.access,data:()=>globalThis.__authTest.access});
  `,
   },
@@ -60,11 +63,11 @@ test("valid authorized Microsoft user maps to approved team ID and logout clears
   assert.equal(profile, null);
   stop();
 });
-test("wrong provider, personal email, missing access and disabled access never open app", async () => {
+test("wrong provider, personal email and disabled access never open app", async () => {
   for (const [u, access] of [
     [user("google.com"), { enabled: true, role: "admin" }],
     [user("microsoft.com", "soli@gmail.com"), { enabled: true, role: "admin" }],
-    [user(), null],
+    [user("microsoft.com", "soli@workplace.arq.br.evil.com"), null],
     [user(), { enabled: false, role: "admin" }],
   ]) {
     state.access = access;
@@ -79,4 +82,19 @@ test("wrong provider, personal email, missing access and disabled access never o
     assert.ok(error);
     stop();
   }
+});
+
+test("corporate accounts enter without approval and match existing team by email", async () => {
+  state.access = null;
+  state.team = [{id:"team-soli",email:"SOLI@workplace.arq.br",isDirector:true}];
+  let profile: any;
+  const stop = service.watchAuthorizedUser((u:any)=>profile=u,(e:Error)=>{throw e;});
+  await state.callback(user());
+  assert.equal(profile.id,"team-soli");
+  assert.equal(profile.isDirector,false);
+  state.team = [];
+  await state.callback(user());
+  assert.equal(profile.id,"uid");
+  assert.equal(profile.isDirector,false);
+  stop();
 });

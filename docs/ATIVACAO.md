@@ -1,6 +1,6 @@
 # Ativação do acesso Microsoft e das regras
 
-Status desta entrega: código e testes locais. Nenhuma configuração, regra ou dado de produção foi alterado.
+Política de acesso: toda conta Microsoft corporativa @workplace.arq.br entra automaticamente como equipe. Não é necessário criar documentos de autorização individual.
 
 ## 1. Preservar os dados existentes
 
@@ -16,7 +16,7 @@ Referência oficial: [autenticação Microsoft com Firebase](https://firebase.go
 
 ## 3. Autorizar o primeiro administrador
 
-Com o provedor configurado, fazer um primeiro login Microsoft na versão de homologação para criar o usuário em Firebase Authentication. O app continuará bloqueado até a autorização.
+Com o provedor configurado, o primeiro login Microsoft cria o usuário em Firebase Authentication e permite acesso de equipe. O aplicativo vincula automaticamente o e-mail ao cadastro existente em teamMembers quando encontra uma correspondência única. Sem correspondência, o login continua permitido e utiliza o UID, sem criar um profissional fictício.
 
 No banco nomeado `ai-studio-archofficegestod-541def0f-9bbe-4e3e-957b-19e4e78db516`, um administrador do Firebase deve criar `access/UID_DO_USUARIO`:
 
@@ -28,7 +28,7 @@ No banco nomeado `ai-studio-archofficegestod-541def0f-9bbe-4e3e-957b-19e4e78db51
 }
 ```
 
-O UID é o do Firebase Authentication, não o ID do Microsoft Entra. `teamMemberId` deve apontar para o colaborador existente para que Minhas Tarefas mantenha o vínculo. Para os demais colaboradores, usar `editor`; desativação: `enabled: false`. O aplicativo não pode criar nem editar esses documentos.
+O documento acima é necessário somente para privilégios administrativos. O UID é o do Firebase Authentication, não o ID do Microsoft Entra. Para a equipe comum não criar documentos: o acesso é automático. Um documento opcional com `enabled: false` bloqueia uma conta. O aplicativo não pode criar nem editar esses documentos, nem obter privilégios administrativos pelo cadastro de equipe.
 
 ## 4. Homologação antes de produção
 

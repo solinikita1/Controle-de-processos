@@ -59,8 +59,8 @@ export function MicrosoftLoginModal({
             Acesso à Workplace
           </h2>
           <p className="text-sm text-stone-600">
-            Entre com sua conta Microsoft corporativa @workplace.arq.br. A conta
-            precisa estar autorizada pela administração.
+            Entre com sua conta Microsoft corporativa @workplace.arq.br.
+            O acesso da equipe é liberado automaticamente.
           </p>
           {(localError || error) && (
             <p role="alert" className="text-sm text-rose-700">

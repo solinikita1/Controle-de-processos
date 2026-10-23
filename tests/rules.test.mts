@@ -79,14 +79,28 @@ test("anonymous access and test collection are denied", async () => {
   await assertFails(setDoc(doc(db, "projects", "new"), project));
   await assertFails(setDoc(doc(db, "test", "connection"), { test: true }));
 });
-test("wrong provider, personal email and unapproved accounts are denied", async () => {
+test("wrong provider and noncorporate email are denied", async () => {
   for (const db of [
     database("admin", "google.com"),
     database("admin", "microsoft.com", "person@gmail.com"),
-    database("unknown"),
+    database("unknown", "microsoft.com", "user@workplace.arq.br.evil.com"),
   ]) {
     await assertFails(getDoc(doc(db, "projects", "p")));
   }
+});
+
+test("corporate newcomer reads and writes without access document, but cannot become admin", async () => {
+  const db = database("newcomer");
+  await assertSucceeds(getDoc(doc(db,"access","newcomer")));
+  await assertSucceeds(getDoc(doc(db,"projects","p")));
+  await assertSucceeds(batchWrite(db,"newcomer","projects/new",project));
+  await assertFails(setDoc(doc(db,"access","newcomer"),{enabled:true,role:"admin"}));
+  await assertFails(batchWrite(db,"newcomer","teamMembers/new",{id:"new",name:"Test",email:"test@workplace.arq.br"}));
+});
+
+test("explicitly disabled corporate user remains blocked", async () => {
+  await env.withSecurityRulesDisabled(ctx=>setDoc(doc(ctx.firestore(),"access","disabled"),{enabled:false}));
+  await assertFails(getDoc(doc(database("disabled"),"projects","p")));
 });
 test("users cannot authorize themselves or change their role", async () => {
   await assertFails(

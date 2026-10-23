@@ -5,7 +5,7 @@ import {
   signOut,
   type User,
 } from "firebase/auth";
-import { doc, getDocFromServer } from "firebase/firestore";
+import { collection, doc, getDocFromServer, getDocsFromServer } from "firebase/firestore";
 import { auth, db } from "./firebaseClient";
 import type { AuthUser } from "../types";
 
@@ -21,23 +21,22 @@ async function authorizedProfile(user: User): Promise<AuthUser> {
   }
   const access = await getDocFromServer(doc(db, "access", user.uid));
   const data = access.data();
-  if (
-    !access.exists() ||
-    data?.enabled !== true ||
-    !["admin", "editor"].includes(data.role) ||
-    typeof data.teamMemberId !== "string" ||
-    !data.teamMemberId
-  ) {
-    throw new Error(
-      "Sua conta ainda não foi autorizada. Solicite acesso à administração.",
-    );
+  if (data?.enabled === false) {
+    throw new Error("O acesso desta conta foi desativado pela administração.");
   }
+  const isAdmin = data?.enabled === true && data?.role === "admin";
+  const team = await getDocsFromServer(collection(db, "teamMembers"));
+  const matches = team.docs.filter((member) =>
+    member.data().email?.trim().toLowerCase() === user.email!.toLowerCase());
+  const teamMemberId = typeof data?.teamMemberId === "string" && data.teamMemberId
+    ? data.teamMemberId
+    : matches.length === 1 ? matches[0].id : user.uid;
   const name = user.displayName || user.email;
   return {
-    id: data.teamMemberId,
+    id: teamMemberId,
     name,
     email: user.email,
-    role: data.role === "admin" ? "Administração" : "Equipe",
+    role: isAdmin ? "Administração" : "Equipe",
     initials: name
       .split(" ")
       .filter(Boolean)
@@ -46,7 +45,7 @@ async function authorizedProfile(user: User): Promise<AuthUser> {
       .join(""),
     avatarColor: "bg-stone-700 text-white",
     department: "",
-    isDirector: data.role === "admin",
+    isDirector: isAdmin,
   };
 }
 
