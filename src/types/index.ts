@@ -233,7 +233,7 @@ export interface BackupSnapshot {
 
 export interface CreationWork { taskId?:string; responsibleId: string; dueDate: string; done: boolean; }
 export interface CreationEvent { id: string; at: string; by: string; action: string; date: string; note: string; link: string; recipient: string; followUp: string; }
-export interface CreationRound { number: number; scope: 'initial'|'project'|'budget'|'both'; request: string; state: 'draft'|'ready'|'presented'|'waiting'|'approved'|'closed'; projectWork?: CreationWork; budgetWork?: CreationWork; events: CreationEvent[]; }
+export interface CreationRound { number: number; scope: 'initial'|'project'|'budget'|'both'; request: string; state: 'draft'|'ready'|'presented'|'waiting'|'approved'|'closed'; projectWork?: CreationWork; budgetWork?: CreationWork; presentationWork?: CreationWork; events: CreationEvent[]; }
 export interface ExecutiveRevision {
  number:number; phase:ArchitecturePhase; request:string; responsibleId:string; dueDate:string; taskId:string;
  state:'working'|'waiting'|'approved'|'superseded'; createdAt:string; createdBy:string;

@@ -793,7 +793,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
           )}
 
           {selectedArea === 'criacao' && <CreationStages tasks={areaTasks} selected={selectedPhaseFilter} onSelect={phase=>{setSelectedPhaseFilter(phase);setSelectedStatusFilter('all');setSearchQuery('');}}/>}
-          {selectedArea === 'criacao' && <CreationFlow key={project.id} project={project} team={allTeamMembers} actor={actor} onSave={onUpdateProject} onAward={project.award?.status !== 'awarded' && onOpenAwardModal ? ()=>onOpenAwardModal(project) : undefined} />}
+          {selectedArea === 'criacao' && <CreationFlow key={project.id} tasks={tasks} project={project} team={allTeamMembers} actor={actor} onSave={onUpdateProject} onAward={project.award?.status !== 'awarded' && onOpenAwardModal ? ()=>onOpenAwardModal(project) : undefined} />}
 
           {/* BANNER C: PROJETO EXECUTIVO (Pós-Award - 4 Pilares Obrigatórios) */}
           {selectedArea === 'executivo' && (

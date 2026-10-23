@@ -14,6 +14,7 @@ export function creationTransition(project:Project,action:CreationAction,input:C
  if(['approved','closed'].includes(round.state)) throw Error('Esta rodada já foi encerrada.');
  if(!isValidDateString(input.date)) throw Error('Informe uma data válida para o registro.');
  if(input.link && !/^https?:\/\//i.test(input.link)) throw Error('Use um link http ou https.');
+ if(['present','send'].includes(action)&&round.presentationWork&&!round.presentationWork.done)throw Error('Conclua o desenvolvimento da apresentação antes de apresentar ou registrar o envio.');
  let phase=project.currentPhase, pipeline=project.pipelineStage;
  const ready=()=> !round.projectWork || round.projectWork.done;
  const allDone=()=>ready()&&(!round.budgetWork||round.budgetWork.done);

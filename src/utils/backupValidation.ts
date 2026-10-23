@@ -75,7 +75,7 @@ const briefing = z
   })
   .passthrough();
 const creationWork = z.object({taskId:id.optional(),responsibleId:text,dueDate:z.union([z.literal(''),date]),done:z.boolean()});
-const creationRound = z.object({number:z.number().int().nonnegative(),scope:z.enum(['initial','project','budget','both']),request:text,state:z.enum(['draft','ready','presented','waiting','approved','closed']),projectWork:creationWork.optional(),budgetWork:creationWork.optional(),events:z.array(z.object({id,at:timestamp,by:nonempty,action:z.enum(['concept','budget','schedule','present','send','revise','projectDone','budgetDone','approve','close']),date,note:text,link:text,recipient:text,followUp:z.union([z.literal(''),date])}))});
+const creationRound = z.object({number:z.number().int().nonnegative(),scope:z.enum(['initial','project','budget','both']),request:text,state:z.enum(['draft','ready','presented','waiting','approved','closed']),projectWork:creationWork.optional(),budgetWork:creationWork.optional(),presentationWork:creationWork.optional(),events:z.array(z.object({id,at:timestamp,by:nonempty,action:z.enum(['concept','budget','schedule','present','send','revise','projectDone','budgetDone','approve','close']),date,note:text,link:text,recipient:text,followUp:z.union([z.literal(''),date])}))});
 export const projectSchema = z
   .object({
     id,

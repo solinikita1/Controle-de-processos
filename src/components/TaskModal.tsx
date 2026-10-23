@@ -1,6 +1,6 @@
 import {TeamOptions} from './TeamOptions';
 import {membersForPhase} from '../utils/teamAreas';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Task, TaskPriority, TaskStatus, ArchitecturePhase, TeamMember } from '../types';
 import { ARCHITECTURE_PHASES } from '../data/mockData';
 import { calculateDaysDifference, validateDateRange, getTodayDateString } from '../utils/dateUtils';
@@ -41,8 +41,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [newChecklistText, setNewChecklistText] = useState('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+  const initialized=useRef('');
+  const saving=useRef(false);
+  const [busy,setBusy]=useState(false);
   // Populate or reset
   useEffect(() => {
+    if(!isOpen){initialized.current='';return;}
+    const key=projectId+':'+(taskToEdit?.id||'new')+':'+initialPhase;
+    if(initialized.current===key)return;initialized.current=key;
     if (taskToEdit) {
       setTitle(taskToEdit.title);
       setDescription(taskToEdit.description || '');
@@ -71,7 +77,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setChecklist([]);
       setErrors({});
     }
-  }, [taskToEdit, isOpen, projectTeam, allTeamMembers, initialPhase]);
+  }, [taskToEdit, isOpen, projectTeam, allTeamMembers, initialPhase, projectId]);
 
   if (!isOpen) return null;
 
@@ -105,6 +111,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(saving.current)return;
     const newErrors: { [key: string]: string } = {};
 
     if (!title.trim()) {
@@ -140,14 +147,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       endDate,
       priority,
       status: completed ? 'concluida' : status,
-      completed,
+      completed: completed || status === 'concluida',
       deliverables: deliverables.trim() || undefined,
       checklist,
       createdAt: taskToEdit ? taskToEdit.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    if (await onSave(updatedTask)) onClose();
+    saving.current=true;setBusy(true);
+    try{if(await onSave(updatedTask))onClose();else setErrors(e=>({...e,save:'Não foi possível salvar. Confira a conexão e tente novamente; seus dados foram mantidos.'}));}catch(e){setErrors(v=>({...v,save:e instanceof Error?e.message:'Falha ao salvar a tarefa.'}));}finally{saving.current=false;setBusy(false);}
   };
 
   // Combine project team members first, then other studio members
@@ -480,6 +488,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           </div>
 
+          {errors.save && <p role="alert" className="text-sm text-rose-700">{errors.save}</p>}
           {/* Buttons */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-200">
             <button
@@ -491,9 +500,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </button>
             <button
               type="submit"
+              disabled={busy}
               className="px-5 py-2 text-xs font-medium text-white bg-stone-900 hover:bg-stone-800 rounded-lg shadow-sm transition-colors"
             >
-              {taskToEdit ? 'Atualizar Tarefa' : 'Salvar Tarefa'}
+              {busy ? 'Salvando…' : taskToEdit ? 'Atualizar Tarefa' : 'Salvar Tarefa'}
             </button>
           </div>
 

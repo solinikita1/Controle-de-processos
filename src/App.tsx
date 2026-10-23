@@ -1,5 +1,5 @@
 import {membersForPhase} from './utils/teamAreas';
-import {creationRevisionTasks,syncCreationTask} from './utils/creationTasks';
+import {creationRevisionTasks,syncCreationTask,presentationPending} from './utils/creationTasks';
 import { OperationsPanel } from './components/OperationsPanel';
 import React, { useState, useEffect, useRef } from 'react';
 import { Project, Task, TeamMember, TaskStatus, AuthUser, ProjectAwardInfo, ArchitecturePhase, BackupSnapshot, BackupPayload } from './types';
@@ -356,13 +356,14 @@ export default function App() {
       pipelineStage = 'obra_implantacao';
     }
 
-    const updated: Project = {
+    let updated: Project = {
       ...project,
       currentPhase: targetPhase,
       status: targetPhase === 'acompanhamento_obra' ? 'obra' : 'desenvolvimento',
       pipelineStage,
     };
 
+    if(targetPhase.startsWith('criacao_')){const linked=creationRevisionTasks(updated,tasks,teamMembers);updated=linked.project;const ids=new Set(linked.changes.map(t=>t.id));updateTasks([...tasks.filter(t=>!ids.has(t.id)),...linked.changes]);linked.changes.forEach(saveTaskToCloud);}
     const nextProjects = projects.map((p) => (p.id === project.id ? updated : p));
     updateProjects(nextProjects);
     saveProjectToCloud(updated);
@@ -593,7 +594,8 @@ export default function App() {
 
   const handleUpdateProjectSingle = withMutation((updatedProject: Project, revisionTask?:Task) => {
     if(revisionTask){updateTasks([...tasks,revisionTask]);saveTaskToCloud(revisionTask);}
-    const linked=creationRevisionTasks(updatedProject,tasks);updatedProject=linked.project;
+    const prior=projects.find(p=>p.id===updatedProject.id);const last=updatedProject.creationRounds?.at(-1)?.events.at(-1);if(last&&['send','present'].includes(last.action)&&last.id!==prior?.creationRounds?.at(-1)?.events.at(-1)?.id&&presentationPending(prior||updatedProject,tasks))throw Error('Conclua o desenvolvimento da apresentação antes de apresentar ou registrar o envio.');
+    const linked=creationRevisionTasks(updatedProject,tasks,teamMembers);updatedProject=linked.project;
     if(linked.changes.length){const ids=new Set(linked.changes.map(t=>t.id));updateTasks([...tasks.filter(t=>!ids.has(t.id)),...linked.changes,...(revisionTask?[revisionTask]:[])]);linked.changes.forEach(saveTaskToCloud);}
     const nextProjects = projects.map((p) => (p.id === updatedProject.id ? updatedProject : p));
     updateProjects(nextProjects);
@@ -631,7 +633,7 @@ export default function App() {
   });
 
   const handleDeleteTask = withMutation((taskId: string) => {
-    if(projects.some(p=>p.creationRounds?.some(r=>[r.projectWork,r.budgetWork].some(w=>w?.taskId===taskId))||p.executiveRevisions?.some(r=>r.taskId===taskId))){throw Error('Esta tarefa integra o histórico de uma revisão e não pode ser excluída.');}
+    if(projects.some(p=>p.creationRounds?.some(r=>[r.projectWork,r.budgetWork,r.presentationWork].some(w=>w?.taskId===taskId))||p.executiveRevisions?.some(r=>r.taskId===taskId))){throw Error('Esta tarefa integra o histórico de uma revisão e não pode ser excluída.');}
     if (window.confirm('Tem certeza que deseja excluir esta tarefa técnica?')) {
       const nextTasks = tasks.filter((t) => t.id !== taskId);
       updateTasks(nextTasks);
