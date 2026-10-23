@@ -269,7 +269,7 @@ export const ReportsAnalyticsView: React.FC<ReportsAnalyticsViewProps> = ({
           </div>
 
           {/* Filter options */}
-          <div className="flex items-center gap-1.5 bg-neutral-100 p-0.5 rounded-lg text-xs">
+          <div className="flex flex-wrap items-center gap-1.5 bg-neutral-100 p-0.5 rounded-lg text-xs">
             <button
               type="button"
               onClick={() => setFilterStatus('ativos')}

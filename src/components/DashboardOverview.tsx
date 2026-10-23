@@ -165,12 +165,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <div className="bg-[#00a4ef] rounded-3xs" />
               <div className="bg-[#ffb900] rounded-3xs" />
             </div>
-            <div className="text-xs">
+            <div className="text-xs min-w-0 break-words">
               <span className="text-neutral-500">Conectado via Microsoft 365: </span>
               <strong className="text-neutral-900">{currentUser.name}</strong>
               <span className="text-neutral-400 font-mono ml-1.5">({currentUser.email})</span>
               {currentUser.isDirector && (
-                <span className="ml-2 px-1.5 py-0.2 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-xs uppercase">
+                <span className="inline-block ml-2 px-1.5 py-0.2 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-xs uppercase">
                   {currentUser.role.includes('CEO') ? 'CEO' : currentUser.role.includes('CSO') ? 'CSO' : 'Diretoria'}
                 </span>
               )}

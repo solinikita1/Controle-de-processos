@@ -132,7 +132,7 @@ export const TaskDonutChart: React.FC<TaskDonutChartProps> = ({
           <select
             value={selectedProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="text-xs px-3 py-1.5 border border-neutral-300 rounded-lg bg-neutral-50/50 hover:bg-white text-neutral-800 font-semibold focus:outline-hidden focus:ring-1 focus:ring-stone-400 cursor-pointer"
+            className="min-w-0 w-full max-w-full md:max-w-sm text-xs px-3 py-1.5 border border-neutral-300 rounded-lg bg-neutral-50/50 hover:bg-white text-neutral-800 font-semibold focus:outline-hidden focus:ring-1 focus:ring-stone-400 cursor-pointer"
           >
             <option value="all">Visão Geral (Todos os Projetos)</option>
             {projects.map((p) => (

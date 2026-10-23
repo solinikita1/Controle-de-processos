@@ -92,12 +92,12 @@ export const OverallTimeline: React.FC<OverallTimelineProps> = ({
           </div>
 
           {/* Project Selector Filter */}
-          <div className="flex items-center gap-1.5 bg-white border border-neutral-300 rounded-xl px-2.5 py-1.5 shadow-2xs">
+          <div className="flex min-w-0 max-w-full items-center gap-1.5 bg-white border border-neutral-300 rounded-xl px-2.5 py-1.5 shadow-2xs">
             <Filter className="w-3.5 h-3.5 text-neutral-500" />
             <select
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="text-xs border-0 bg-transparent text-neutral-800 font-semibold focus:outline-hidden cursor-pointer"
+              className="min-w-0 w-full text-xs border-0 bg-transparent text-neutral-800 font-semibold focus:outline-hidden cursor-pointer"
             >
               <option value="all">Todos os Projetos ({projects.length})</option>
               {projects.map((p) => (

@@ -209,7 +209,7 @@ export const EsteiraPipelineView: React.FC<EsteiraPipelineViewProps> = ({
     <div className="space-y-6">
       
       {/* Top Banner & Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-bold uppercase tracking-wider text-pink-700 bg-pink-50 border border-pink-200 px-2 py-0.5 rounded-full">
@@ -218,7 +218,7 @@ export const EsteiraPipelineView: React.FC<EsteiraPipelineViewProps> = ({
             <span className="w-1 h-1 rounded-full bg-neutral-300" />
             <span className="text-xs text-neutral-400">Controle de Fluxo e Fila</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight flex flex-wrap items-center gap-2">
             Esteira Sequencial de Projetos & Briefings
           </h1>
           <p className="text-xs text-neutral-500 mt-0.5 max-w-3xl">
@@ -288,7 +288,7 @@ export const EsteiraPipelineView: React.FC<EsteiraPipelineViewProps> = ({
       {/* Control Bar: Filters & View Switcher */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-neutral-200 shadow-2xs">
         {/* Search */}
-        <div className="relative flex-1 min-w-[220px]">
+        <div className="relative flex-1 min-w-0">
           <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-3" />
           <input
             type="text"
@@ -300,7 +300,7 @@ export const EsteiraPipelineView: React.FC<EsteiraPipelineViewProps> = ({
         </div>
 
         {/* Priority Filter */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-neutral-400" />
             <select
@@ -491,7 +491,7 @@ export const EsteiraPipelineView: React.FC<EsteiraPipelineViewProps> = ({
                   </div>
 
                   {/* Right: Actions, Reordering & Priority Control */}
-                  <div className="flex items-center gap-2 shrink-0 md:self-center border-t md:border-t-0 pt-3 md:pt-0">
+                  <div className="flex flex-wrap items-center gap-2 md:self-center border-t md:border-t-0 pt-3 md:pt-0">
                     {/* Priority Selector Quick Change */}
                     <div className="flex flex-col text-right mr-1">
                       <span className="text-[10px] text-neutral-400 font-semibold mb-0.5">Prioridade:</span>
@@ -623,7 +623,7 @@ export const EsteiraPipelineView: React.FC<EsteiraPipelineViewProps> = ({
               >
                 {/* Stage Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-neutral-200 mb-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div className={`p-1.5 rounded-lg border ${stage.color}`}>
                       <Icon className="w-4 h-4" />
                     </div>

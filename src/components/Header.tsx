@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xs border-b border-neutral-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
         
         {/* Zone 1: Office branding */}
         <div className="flex items-center gap-3 shrink-0">
@@ -70,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Zone 2: Navigation links */}
-        <nav className="hidden lg:flex items-center gap-5 text-xs font-semibold text-neutral-600">
+        <nav aria-label="Navegação principal" className="order-3 w-full min-w-0 flex overflow-x-auto items-center gap-5 py-2 text-xs font-semibold text-neutral-600">
           <button
             type="button"
             onClick={() => onNavigate('overview')}
@@ -170,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Zone 3: Microsoft User Account & Actions */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-1 sm:gap-2.5 min-w-0">
           
           {/* Cloud Sync Status (Firebase Firestore) */}
           <div
@@ -228,7 +228,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Profile Dropdown Menu */}
               {isProfileMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-neutral-200 z-50 p-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="fixed left-3 right-3 top-20 sm:absolute sm:left-auto sm:right-0 sm:top-full mt-2 w-auto sm:w-80 bg-white rounded-2xl shadow-2xl border border-neutral-200 z-50 p-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                   {/* User Profile Card */}
                   <div className="p-3.5 bg-gradient-to-br from-stone-900 to-stone-950 text-white rounded-xl mb-1.5 shadow-sm">
                     <div className="flex items-center gap-3">

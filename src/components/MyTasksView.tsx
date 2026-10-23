@@ -84,12 +84,12 @@ export const MyTasksView: React.FC<MyTasksViewProps> = ({
       {/* Top Banner with Microsoft User Persona */}
       <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm ${currentUser.avatarColor}`}>
               {currentUser.initials}
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl font-bold tracking-tight text-neutral-900">
                   Painel Individual: {currentUser.name}
                 </h1>
@@ -188,7 +188,7 @@ export const MyTasksView: React.FC<MyTasksViewProps> = ({
         </div>
 
         {/* Project selector */}
-        <div className="w-full sm:w-auto flex items-center gap-2">
+        <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
           <span className="text-xs text-neutral-400 font-medium whitespace-nowrap">Projeto:</span>
           <select
             value={selectedProjectId}
