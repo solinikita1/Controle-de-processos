@@ -1,0 +1,6 @@
+{
+  "name": "ArchOffice - Gestão de Projetos Corporativos",
+  "description": "Sistema de gestão de projetos de arquitetura corporativa, cronogramas obrigatórios com início/fim, equipe, fases e tarefas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

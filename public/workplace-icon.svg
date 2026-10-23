@@ -1,0 +1,10 @@
+<svg width="128" height="128" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wpGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFC700" />
+      <stop offset="100%" stop-color="#E5A800" />
+    </linearGradient>
+  </defs>
+  <path d="M 0 0 L 22 0 L 48 54 L 48 55 L 72 6 L 94 6 L 56 86 L 40 86 Z" fill="url(#wpGoldGrad)" />
+  <path d="M 44 14 L 98 14 L 68 70 L 52 70 L 76 28 L 50 28 Z" fill="url(#wpGoldGrad)" />
+</svg>

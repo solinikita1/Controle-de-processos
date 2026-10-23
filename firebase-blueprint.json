@@ -1,0 +1,115 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project",
+      "description": "Projeto de arquitetura corporativa da Workplace.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "name": { "type": "string" },
+        "client": { "type": "string" },
+        "location": { "type": "string" },
+        "areaM2": { "type": "number" },
+        "typology": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string" },
+        "currentPhase": { "type": "string" },
+        "priority": { "type": "string" },
+        "pipelineStage": { "type": "string" },
+        "pipelineOrder": { "type": "number" },
+        "entryDate": { "type": "string" },
+        "briefing": { "type": "object" },
+        "award": { "type": "object" },
+        "isArchived": { "type": "boolean" },
+        "archivedAt": { "type": "string" },
+        "archivedReason": { "type": "string" },
+        "startDate": { "type": "string" },
+        "targetEndDate": { "type": "string" },
+        "estimatedBudgetBRL": { "type": "number" },
+        "teamMemberIds": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "code", "name", "client", "currentPhase", "startDate", "targetEndDate"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Tarefa técnica ou pilar da esteira corporativa.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "phase": { "type": "string" },
+        "responsibleId": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "priority": { "type": "string" },
+        "status": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "deliverables": { "type": "string" },
+        "checklist": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "projectId", "title", "phase", "responsibleId", "startDate", "endDate", "priority", "status"]
+    },
+    "TeamMember": {
+      "title": "TeamMember",
+      "description": "Colaborador ou diretor da Workplace.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "cau": { "type": "string" },
+        "initials": { "type": "string" },
+        "avatarColor": { "type": "string" },
+        "department": { "type": "string" },
+        "isDirector": { "type": "boolean" }
+      },
+      "required": ["id", "name", "role", "email", "initials"]
+    },
+    "BackupSnapshot": {
+      "title": "BackupSnapshot",
+      "description": "Snapshot de salvaguarda e ponto de restauração do Workplace Arquitetura.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdByName": { "type": "string" },
+        "projectCount": { "type": "number" },
+        "taskCount": { "type": "number" },
+        "teamCount": { "type": "number" },
+        "sizeBytes": { "type": "number" },
+        "description": { "type": "string" },
+        "payload": { "type": "object" }
+      },
+      "required": ["id", "name", "createdAt", "projectCount", "taskCount", "teamCount"]
+    }
+  },
+  "firestore": {
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Projetos corporativos da Workplace"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Tarefas técnicas de projetos e pilares executivos"
+    },
+    "/teamMembers/{memberId}": {
+      "schema": "TeamMember",
+      "description": "Membros da equipe Workplace e diretoria"
+    },
+    "/backups/{backupId}": {
+      "schema": "BackupSnapshot",
+      "description": "Pontos de restauração e backups em nuvem do estúdio"
+    }
+  }
+}

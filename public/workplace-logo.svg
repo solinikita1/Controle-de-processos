@@ -1,0 +1,27 @@
+<svg width="340" height="70" viewBox="0 0 340 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wpGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFC700" />
+      <stop offset="100%" stop-color="#E5A800" />
+    </linearGradient>
+  </defs>
+
+  <!-- Origami Icon -->
+  <g transform="translate(0, 2) scale(0.72)">
+    <path d="M 0 0 L 22 0 L 48 54 L 48 55 L 72 6 L 94 6 L 56 86 L 40 86 Z" fill="url(#wpGoldGrad)" />
+    <path d="M 44 14 L 98 14 L 68 70 L 52 70 L 76 28 L 50 28 Z" fill="url(#wpGoldGrad)" />
+  </g>
+
+  <!-- WORKPLACE -->
+  <g fill="#171717" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="28" letter-spacing="-0.03em">
+    <text x="76" y="38">WORKPL</text>
+    <!-- Stylized A without crossbar -->
+    <path d="M 215 16 L 228 38 L 222 38 L 215 25 L 208 38 L 202 38 Z" fill="#171717" />
+    <text x="231" y="38">CE</text>
+  </g>
+
+  <!-- ARQUITETURA CORPORATIVA -->
+  <text x="77" y="55" fill="#525252" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="9.5" letter-spacing="0.28em">
+    ARQUITETURA CORPORATIVA
+  </text>
+</svg>
