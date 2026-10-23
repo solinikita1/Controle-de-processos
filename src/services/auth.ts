@@ -82,7 +82,9 @@ export function watchAuthorizedUser(
 }
 
 export async function signInWithMicrosoft(): Promise<void> {
-  const tenant = import.meta.env.VITE_MICROSOFT_TENANT_ID;
+  // Public Workplace directory ID; the client secret stays only in Firebase.
+  const tenant = import.meta.env.VITE_MICROSOFT_TENANT_ID ||
+    "fdd3d003-fbc1-4733-8da9-1b06d157aae1";
   if (
     !tenant ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
