@@ -6,7 +6,7 @@ interface AwardModalProps {
   isOpen: boolean;
   onClose: () => void;
   project: Project;
-  onConfirmAward: (projectId: string, awardInfo: ProjectAwardInfo) => void;
+  onConfirmAward: (projectId: string, awardInfo: ProjectAwardInfo) => Promise<boolean>;
 }
 
 export const AwardModal: React.FC<AwardModalProps> = ({
@@ -31,7 +31,7 @@ export const AwardModal: React.FC<AwardModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const valNum = parseFloat(awardValue.replace(/[^0-9.]/g, '')) || 0;
 
@@ -43,8 +43,7 @@ export const AwardModal: React.FC<AwardModalProps> = ({
       notes: notes.trim() || undefined,
     };
 
-    onConfirmAward(project.id, awardInfo);
-    onClose();
+    if (await onConfirmAward(project.id, awardInfo)) onClose();
   };
 
   return (

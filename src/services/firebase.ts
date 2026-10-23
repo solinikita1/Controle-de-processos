@@ -1,262 +1,193 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
-  getFirestore,
   collection,
   doc,
-  setDoc,
-  deleteDoc,
   onSnapshot,
-  getDocs,
+  getDocsFromServer,
   getDocFromServer,
-  writeBatch,
-  Unsubscribe,
-} from 'firebase/firestore';
-import { Project, Task, TeamMember, BackupSnapshot, BackupPayload } from '../types';
-import firebaseConfig from '../../firebase-applet-config.json';
+  runTransaction,
+  serverTimestamp,
+  type Transaction,
+} from "firebase/firestore";
+import type {
+  Project,
+  Task,
+  TeamMember,
+  BackupSnapshot,
+  BackupPayload,
+} from "../types";
+import { auth, db } from "./firebaseClient";
+import {
+  validateBackupPayload,
+  projectSchema,
+  taskSchema,
+  teamSchema,
+} from "../utils/backupValidation";
+import {
+  planReplacement,
+  type CloudChange,
+  type DataCollection,
+} from "../utils/restorePlan";
+export { db } from "./firebaseClient";
 
-// Initialize Firebase App singleton
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const revisionRef = doc(db, "system", "revision");
+const clean = (value: unknown) => JSON.parse(JSON.stringify(value));
+const assertSession = () => {
+  if (!auth.currentUser)
+    throw new Error("Entre com sua conta antes de acessar os dados.");
+};
 
-// Initialize Firestore with specific database ID if provisioned
-export const db = firebaseConfig.firestoreDatabaseId
-  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
-  : getFirestore(app);
-
-// Connection test per skill directive
 export async function testFirestoreConnection(): Promise<boolean> {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    assertSession();
+    await getDocFromServer(revisionRef);
     return true;
-  } catch (error) {
-    // "client is offline" or "not-found" is normal for non-existent test document
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase Firestore está offline ou sem conexão.');
-      return false;
-    }
-    return true;
+  } catch {
+    return false;
   }
 }
 
-// Collections references
-const PROJECTS_COLLECTION = 'projects';
-const TASKS_COLLECTION = 'tasks';
-const TEAM_COLLECTION = 'teamMembers';
-const BACKUPS_COLLECTION = 'backups';
-
-// Helper to guarantee unique documents by id
-function deduplicate<T extends { id: string }>(items: T[]): T[] {
-  const map = new Map<string, T>();
-  for (const item of items) {
-    if (item && item.id) {
-      map.set(item.id, item);
-    }
-  }
-  return Array.from(map.values());
-}
-
-// --- Realtime Subscriptions ---
-
-export function subscribeToProjects(callback: (projects: Project[]) => void): Unsubscribe {
-  const colRef = collection(db, PROJECTS_COLLECTION);
+function subscribe<T extends { id: string }>(
+  name: DataCollection,
+  callback: (items: T[]) => void,
+  onError: (error: Error) => void,
+) {
+  assertSession();
   return onSnapshot(
-    colRef,
+    collection(db, name),
+    { includeMetadataChanges: true },
     (snapshot) => {
-      const items: Project[] = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        const proj = { ...data, id: (data.id || docSnap.id)?.trim() } as Project;
-        proj.teamMemberIds = Array.from(new Set((proj.teamMemberIds || []).map((id) => id?.trim()))).filter(Boolean);
-        items.push(proj);
-      });
-      callback(deduplicate(items));
-    },
-    (error) => {
-      console.warn('Sincronização de projetos do Firestore:', error.message);
-    }
-  );
-}
-
-export function subscribeToTasks(callback: (tasks: Task[]) => void): Unsubscribe {
-  const colRef = collection(db, TASKS_COLLECTION);
-  return onSnapshot(
-    colRef,
-    (snapshot) => {
-      const items: Task[] = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        items.push({ ...data, id: (data.id || docSnap.id)?.trim() } as Task);
-      });
-      callback(deduplicate(items));
-    },
-    (error) => {
-      console.warn('Sincronização de tarefas do Firestore:', error.message);
-    }
-  );
-}
-
-export function subscribeToTeam(callback: (team: TeamMember[]) => void): Unsubscribe {
-  const colRef = collection(db, TEAM_COLLECTION);
-  return onSnapshot(
-    colRef,
-    (snapshot) => {
-      const items: TeamMember[] = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        const member = { ...data, id: (data.id || docSnap.id)?.trim() } as any;
-        delete member.cau;
-        items.push(member as TeamMember);
-      });
-      callback(deduplicate(items));
-    },
-    (error) => {
-      console.warn('Sincronização da equipe do Firestore:', error.message);
-    }
-  );
-}
-
-export function subscribeToBackups(callback: (backups: BackupSnapshot[]) => void): Unsubscribe {
-  const colRef = collection(db, BACKUPS_COLLECTION);
-  return onSnapshot(
-    colRef,
-    (snapshot) => {
-      const items: BackupSnapshot[] = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        items.push({ ...data, id: (data.id || docSnap.id)?.trim() } as BackupSnapshot);
-      });
-      // Sort newest first
-      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      callback(deduplicate(items));
-    },
-    (error) => {
-      console.warn('Sincronização de backups do Firestore:', error.message);
-    }
-  );
-}
-
-// --- Mutations ---
-
-export async function saveProjectToCloud(project: Project): Promise<void> {
-  const docRef = doc(db, PROJECTS_COLLECTION, project.id);
-  // Clean undefined fields for Firestore compatibility
-  const cleanData = JSON.parse(JSON.stringify(project));
-  await setDoc(docRef, cleanData, { merge: true });
-}
-
-export async function deleteProjectFromCloud(projectId: string): Promise<void> {
-  const docRef = doc(db, PROJECTS_COLLECTION, projectId);
-  await deleteDoc(docRef);
-}
-
-export async function saveTaskToCloud(task: Task): Promise<void> {
-  const docRef = doc(db, TASKS_COLLECTION, task.id);
-  const cleanData = JSON.parse(JSON.stringify(task));
-  await setDoc(docRef, cleanData, { merge: true });
-}
-
-export async function deleteTaskFromCloud(taskId: string): Promise<void> {
-  const docRef = doc(db, TASKS_COLLECTION, taskId);
-  await deleteDoc(docRef);
-}
-
-export async function saveTeamMemberToCloud(member: TeamMember): Promise<void> {
-  const docRef = doc(db, TEAM_COLLECTION, member.id);
-  const cleanData = JSON.parse(JSON.stringify(member));
-  await setDoc(docRef, cleanData, { merge: true });
-}
-
-export async function deleteTeamMemberFromCloud(memberId: string): Promise<void> {
-  const docRef = doc(db, TEAM_COLLECTION, memberId);
-  await deleteDoc(docRef);
-}
-
-export async function saveBackupToCloud(backup: BackupSnapshot): Promise<void> {
-  const docRef = doc(db, BACKUPS_COLLECTION, backup.id);
-  const cleanData = JSON.parse(JSON.stringify(backup));
-  await setDoc(docRef, cleanData, { merge: true });
-}
-
-export async function deleteBackupFromCloud(backupId: string): Promise<void> {
-  const docRef = doc(db, BACKUPS_COLLECTION, backupId);
-  await deleteDoc(docRef);
-}
-
-export async function restoreDataInCloudBatch(payload: BackupPayload): Promise<void> {
-  const cleanProjects = deduplicate(payload.projects);
-  const cleanTasks = deduplicate(payload.tasks);
-  const cleanTeam = deduplicate(payload.team);
-
-  const batch = writeBatch(db);
-
-  cleanProjects.forEach((proj) => {
-    const ref = doc(db, PROJECTS_COLLECTION, proj.id);
-    batch.set(ref, JSON.parse(JSON.stringify(proj)));
-  });
-
-  cleanTasks.forEach((task) => {
-    const ref = doc(db, TASKS_COLLECTION, task.id);
-    batch.set(ref, JSON.parse(JSON.stringify(task)));
-  });
-
-  cleanTeam.forEach((member) => {
-    const ref = doc(db, TEAM_COLLECTION, member.id);
-    batch.set(ref, JSON.parse(JSON.stringify(member)));
-  });
-
-  await batch.commit();
-}
-
-// --- Batch / Seed Initial Data ---
-
-export async function seedInitialFirestoreData(
-  defaultProjects: Project[],
-  defaultTasks: Task[],
-  defaultTeam: TeamMember[],
-  defaultBackup?: BackupSnapshot
-): Promise<{ seeded: boolean; projectCount: number }> {
-  try {
-    const existingSnap = await getDocs(collection(db, PROJECTS_COLLECTION));
-    if (!existingSnap.empty) {
-      // Check if backup collection is empty and seed default backup if so
-      if (defaultBackup) {
-        const backupsSnap = await getDocs(collection(db, BACKUPS_COLLECTION));
-        if (backupsSnap.empty) {
-          await setDoc(doc(db, BACKUPS_COLLECTION, defaultBackup.id), JSON.parse(JSON.stringify(defaultBackup)));
-        }
+      // Cached/partial snapshots must not replace the last confirmed server state.
+      if (snapshot.metadata.fromCache) {
+        onError(new Error("Aguardando confirmação do servidor."));
+        return;
       }
-      return { seeded: false, projectCount: existingSnap.size };
-    }
+      if (snapshot.metadata.hasPendingWrites) return;
+      callback(snapshot.docs.map((d) => ({ ...d.data(), id: d.id }) as T));
+    },
+    onError,
+  );
+}
+export const subscribeToProjects = (
+  cb: (items: Project[]) => void,
+  error: (e: Error) => void,
+) => subscribe("projects", cb, error);
+export const subscribeToTasks = (
+  cb: (items: Task[]) => void,
+  error: (e: Error) => void,
+) => subscribe("tasks", cb, error);
+export const subscribeToTeam = (
+  cb: (items: TeamMember[]) => void,
+  error: (e: Error) => void,
+) => subscribe("teamMembers", cb, error);
+export const subscribeToBackups = (
+  cb: (items: BackupSnapshot[]) => void,
+  error: (e: Error) => void,
+) =>
+  subscribe<BackupSnapshot>(
+    "backups",
+    (items) => cb(items.sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
+    error,
+  );
 
-    const cleanProjects = deduplicate(defaultProjects);
-    const cleanTasks = deduplicate(defaultTasks);
-    const cleanTeam = deduplicate(defaultTeam);
-
-    const batch = writeBatch(db);
-
-    cleanProjects.forEach((proj) => {
-      const ref = doc(db, PROJECTS_COLLECTION, proj.id);
-      batch.set(ref, JSON.parse(JSON.stringify(proj)));
-    });
-
-    cleanTasks.forEach((task) => {
-      const ref = doc(db, TASKS_COLLECTION, task.id);
-      batch.set(ref, JSON.parse(JSON.stringify(task)));
-    });
-
-    cleanTeam.forEach((member) => {
-      const ref = doc(db, TEAM_COLLECTION, member.id);
-      batch.set(ref, JSON.parse(JSON.stringify(member)));
-    });
-
-    if (defaultBackup) {
-      const ref = doc(db, BACKUPS_COLLECTION, defaultBackup.id);
-      batch.set(ref, JSON.parse(JSON.stringify(defaultBackup)));
-    }
-
-    await batch.commit();
-    return { seeded: true, projectCount: cleanProjects.length };
-  } catch (error) {
-    console.warn('Falha ao inicializar dados no Firestore:', error);
-    return { seeded: false, projectCount: 0 };
+function validateChange(change: CloudChange) {
+  if (!change.id || change.id.length > 128 || change.id.includes("/"))
+    throw new Error("Identificador inválido.");
+  if (change.data === undefined) return;
+  const schema =
+    change.collection === "projects"
+      ? projectSchema
+      : change.collection === "tasks"
+        ? taskSchema
+        : change.collection === "teamMembers"
+          ? teamSchema
+          : null;
+  if (schema) schema.parse(change.data);
+  if ((change.data as { id?: unknown }).id !== change.id)
+    throw new Error("ID do registro inconsistente.");
+  if (new TextEncoder().encode(JSON.stringify(change.data)).length > 900_000)
+    throw new Error("Registro excede o limite seguro de tamanho (900 kB).");
+}
+function apply(tx: Transaction, changes: CloudChange[], revision: number) {
+  const unique = new Map(changes.map((c) => [c.collection + "/" + c.id, c]));
+  if (unique.size > 449)
+    throw new Error("Operação excede 449 registros. Nenhum dado foi alterado.");
+  for (const change of unique.values()) {
+    validateChange(change);
+    const ref = doc(db, change.collection, change.id);
+    if (change.data === undefined) tx.delete(ref);
+    else tx.set(ref, clean(change.data));
   }
+  tx.set(revisionRef, {
+    value: revision + 1,
+    updatedAt: serverTimestamp(),
+    updatedBy: auth.currentUser!.uid,
+  });
+}
+
+// Every write advances the same revision. A restore cannot commit over concurrent edits.
+export async function commitCloudChanges(
+  changes: CloudChange[],
+): Promise<void> {
+  if (!changes.length) return;
+  assertSession();
+  await runTransaction(db, async (tx) => {
+    const revision = await tx.get(revisionRef);
+    apply(tx, changes, revision.data()?.value ?? 0);
+  });
+}
+export const saveBackupToCloud = (backup: BackupSnapshot) =>
+  commitCloudChanges([{ collection: "backups", id: backup.id, data: backup }]);
+export const deleteBackupFromCloud = (id: string) =>
+  commitCloudChanges([{ collection: "backups", id }]);
+
+export async function restoreDataInCloudBatch(
+  raw: BackupPayload,
+): Promise<void> {
+  assertSession();
+  const checked = validateBackupPayload(raw);
+  if (!checked.valid || !checked.payload) throw new Error(checked.error);
+  const payload = checked.payload;
+  const backupId = "pre-restore-" + crypto.randomUUID();
+  const startingRevision =
+    (await getDocFromServer(revisionRef)).data()?.value ?? 0;
+  await runTransaction(db, async (tx) => {
+    const revision = await tx.get(revisionRef);
+    if ((revision.data()?.value ?? 0) !== startingRevision)
+      throw new Error(
+        "Os dados mudaram durante a restauração. Confira as alterações e tente novamente.",
+      );
+    const [projects, tasks, team] = await Promise.all([
+      getDocsFromServer(collection(db, "projects")),
+      getDocsFromServer(collection(db, "tasks")),
+      getDocsFromServer(collection(db, "teamMembers")),
+    ]);
+    const changes = planReplacement(payload, {
+      projects: projects.docs.map((d) => d.id),
+      tasks: tasks.docs.map((d) => d.id),
+      teamMembers: team.docs.map((d) => d.id),
+    });
+    const now = new Date().toISOString();
+    const previous = {
+      version: "5.0.0",
+      systemName: "Workplace Arquitetura Corporativa",
+      exportedAt: now,
+      projects: projects.docs.map((d) => ({ ...d.data(), id: d.id })),
+      tasks: tasks.docs.map((d) => ({ ...d.data(), id: d.id })),
+      team: team.docs.map((d) => ({ ...d.data(), id: d.id })),
+    };
+    const backup = {
+      id: backupId,
+      name: "Antes da restauração",
+      createdAt: now,
+      createdBy: auth.currentUser!.uid,
+      createdByName: "Backup automático",
+      projectCount: projects.size,
+      taskCount: tasks.size,
+      teamCount: team.size,
+      sizeBytes: new TextEncoder().encode(JSON.stringify(previous)).length,
+      payload: previous,
+    };
+    changes.push({ collection: "backups", id: backupId, data: backup });
+    apply(tx, changes, revision.data()?.value ?? 0);
+  });
 }

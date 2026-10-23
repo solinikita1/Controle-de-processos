@@ -1,6 +1,7 @@
 import { Project, Task, TeamMember, StudioStats, AuthUser, BackupSnapshot, BackupPayload } from '../types';
 import { INITIAL_PROJECTS, INITIAL_TASKS, INITIAL_TEAM_MEMBERS } from '../data/mockData';
 import { checkDateStatus } from './dateUtils';
+export { validateBackupPayload } from './backupValidation';
 
 const STORAGE_KEYS = {
   PROJECTS: 'workplace_projects_v5',
@@ -10,36 +11,8 @@ const STORAGE_KEYS = {
   BACKUPS: 'workplace_backups_v5',
 };
 
-// Default authenticated user (Soli, CSO)
-export const DEFAULT_AUTH_USER: AuthUser = {
-  id: 'team-soli',
-  name: 'Solimar Isaac (Soli)',
-  email: 'solimar.isaac@gmail.com',
-  role: 'CSO · Criadora & Desenvolvedora do Produto',
-  initials: 'SI',
-  avatarColor: 'bg-amber-600 text-white',
-  department: 'Diretoria',
-  isDirector: true
-};
-
-export function loadStoredAuthUser(): AuthUser | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.AUTH);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
-        if (parsed.id === 'team-soli') {
-          return DEFAULT_AUTH_USER;
-        }
-        return parsed;
-      }
-    }
-  } catch (e) {
-    console.error('Failed to parse auth user:', e);
-  }
-  // Default to Solimar Isaac (CSO · Criadora)
-  return DEFAULT_AUTH_USER;
-}
+// A cached profile is never proof of authentication. Firebase owns the session.
+export function loadStoredAuthUser(): AuthUser | null { return null; }
 
 export function saveStoredAuthUser(user: AuthUser | null): void {
   try {
@@ -56,8 +29,8 @@ export function saveStoredAuthUser(user: AuthUser | null): void {
 export function deduplicateById<T extends { id: string }>(items: T[]): T[] {
   const map = new Map<string, T>();
   for (const item of items) {
-    if (item && item.id) {
-      map.set(item.id.trim(), item);
+    if (item && typeof item.id === 'string' && item.id.trim()) {
+      map.set(item.id.trim(), { ...item, id: item.id.trim() });
     }
   }
   return Array.from(map.values());
@@ -68,7 +41,7 @@ export function loadStoredProjects(): Project[] {
     const raw = localStorage.getItem(STORAGE_KEYS.PROJECTS);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed.some(p => p.priority)) {
+      if (Array.isArray(parsed)) {
         return deduplicateById(parsed).map((p) => ({
           ...p,
           teamMemberIds: Array.from(new Set((p.teamMemberIds || []).map((id: string) => id?.trim()))).filter(Boolean),
@@ -78,10 +51,7 @@ export function loadStoredProjects(): Project[] {
   } catch (e) {
     console.error('Failed to parse stored projects:', e);
   }
-  return deduplicateById(INITIAL_PROJECTS).map((p) => ({
-    ...p,
-    teamMemberIds: Array.from(new Set((p.teamMemberIds || []).map((id: string) => id?.trim()))).filter(Boolean),
-  }));
+  return [];
 }
 
 export function saveStoredProjects(projects: Project[]): void {
@@ -101,14 +71,14 @@ export function loadStoredTasks(): Task[] {
     const raw = localStorage.getItem(STORAGE_KEYS.TASKS);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed.some(t => t.id === 'task-501')) {
+      if (Array.isArray(parsed)) {
         return deduplicateById(parsed);
       }
     }
   } catch (e) {
     console.error('Failed to parse stored tasks:', e);
   }
-  return deduplicateById(INITIAL_TASKS);
+  return [];
 }
 
 export function saveStoredTasks(tasks: Task[]): void {
@@ -125,21 +95,14 @@ export function loadStoredTeam(): TeamMember[] {
     const raw = localStorage.getItem(STORAGE_KEYS.TEAM);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Ensure we have the Workplace team members with updated roles (e.g. CSO / CEO / Comercial) and without Bruno/TI
-      if (
-        Array.isArray(parsed) &&
-        parsed.length >= 15 &&
-        parsed.some(m => m.role === 'CSO' || m.role === 'CEO') &&
-        parsed.some(m => m.name.includes('Fernanda') && m.role === 'Comercial') &&
-        !parsed.some(m => m.id === 'team-bruno' || m.id === 'team-ti')
-      ) {
+      if (Array.isArray(parsed)) {
         return deduplicateById(parsed).map(({ cau, ...rest }: any) => rest as TeamMember);
       }
     }
   } catch (e) {
     console.error('Failed to parse stored team:', e);
   }
-  return deduplicateById(INITIAL_TEAM_MEMBERS);
+  return [];
 }
 
 export function saveStoredTeam(team: TeamMember[]): void {
@@ -220,16 +183,14 @@ export function loadStoredBackups(): BackupSnapshot[] {
     const raw = localStorage.getItem(STORAGE_KEYS.BACKUPS);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return deduplicateById(parsed);
       }
     }
   } catch (e) {
     console.error('Failed to parse stored backups:', e);
   }
-  const baseline = getBaselineBackupSnapshot();
-  saveStoredBackups([baseline]);
-  return [baseline];
+  return [];
 }
 
 export function saveStoredBackups(backups: BackupSnapshot[]): void {
@@ -272,43 +233,5 @@ export function downloadJsonFile(data: unknown, filename: string): void {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-export function validateBackupPayload(parsed: any): { valid: boolean; payload?: BackupPayload; error?: string } {
-  if (!parsed || typeof parsed !== 'object') {
-    return { valid: false, error: 'O arquivo não contém um objeto JSON válido.' };
-  }
-
-  if (!Array.isArray(parsed.projects)) {
-    return { valid: false, error: 'Estrutura inválida: lista de projetos ausente ou corrompida.' };
-  }
-
-  if (!Array.isArray(parsed.tasks)) {
-    return { valid: false, error: 'Estrutura inválida: lista de tarefas ausente ou corrompida.' };
-  }
-
-  if (!Array.isArray(parsed.team)) {
-    return { valid: false, error: 'Estrutura inválida: lista de equipe ausente ou corrompida.' };
-  }
-
-  const cleanProjects = deduplicateById(parsed.projects).map((p: any) => ({
-    ...p,
-    teamMemberIds: Array.from(new Set((p.teamMemberIds || []).map((id: any) => String(id)?.trim()))).filter(Boolean),
-  }));
-
-  const cleanTasks = deduplicateById(parsed.tasks);
-  const cleanTeam = deduplicateById(parsed.team);
-
-  const payload: BackupPayload = {
-    version: parsed.version || '5.0.0',
-    systemName: parsed.systemName || 'Workplace Arquitetura Corporativa',
-    exportedAt: parsed.exportedAt || new Date().toISOString(),
-    exportedBy: parsed.exportedBy || 'Importação Manual',
-    projects: cleanProjects as Project[],
-    tasks: cleanTasks as Task[],
-    team: cleanTeam as TeamMember[],
-  };
-
-  return { valid: true, payload };
 }
 

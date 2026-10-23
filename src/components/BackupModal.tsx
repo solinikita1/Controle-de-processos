@@ -68,6 +68,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   const [backupName, setBackupName] = useState(defaultBackupName);
   const [backupDescription, setBackupDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [operationError,setOperationError]=useState<string|null>(null);
   
   // Restore confirmation modal state
   const [pendingRestore, setPendingRestore] = useState<{
@@ -97,12 +98,14 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!backupName.trim()) return;
-    setIsCreating(true);
+    setIsCreating(true);setOperationError(null);
     try {
       await onCreateBackup(backupName.trim(), backupDescription.trim() || undefined);
       setBackupName(`Backup Workplace - ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`);
       setBackupDescription('');
       setActiveTab('snapshots');
+    } catch(error) {
+      setOperationError(error instanceof Error ? error.message : 'Falha ao criar backup.');
     } finally {
       setIsCreating(false);
     }
@@ -139,12 +142,15 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   // Confirm and Execute Restore
   const handleConfirmRestore = async () => {
     if (!pendingRestore) return;
-    setIsRestoring(true);
+    setIsRestoring(true);setOperationError(null);
     try {
       await onRestoreBackup(pendingRestore.payload, pendingRestore.name);
       setPendingRestore(null);
       setUploadedPayload(null);
       onClose();
+    } catch(error) {
+      setOperationError(error instanceof Error ? error.message : 'Falha ao restaurar backup.');
+      setPendingRestore(null);
     } finally {
       setIsRestoring(false);
     }
@@ -162,6 +168,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
         className="relative w-full max-w-3xl bg-white border border-neutral-200 rounded-2xl shadow-2xl my-6 overflow-hidden text-neutral-900 flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
+        {operationError && <p role="alert" className="p-4 text-sm text-rose-800 bg-rose-50">{operationError}</p>}
         {/* Top Header */}
         <div className="px-6 py-4 border-b border-neutral-200 bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -487,7 +494,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
 
                           <button
                             type="button"
-                            onClick={() => onDeleteBackup(snap.id)}
+                            onClick={() => { void onDeleteBackup(snap.id).catch(error => setOperationError(error instanceof Error ? error.message : 'Falha ao excluir backup.')); }}
                             title="Excluir este ponto da nuvem"
                             className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors"
                           >

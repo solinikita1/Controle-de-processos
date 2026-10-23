@@ -28,7 +28,7 @@ import {
 interface BriefingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (project: Project) => void;
+  onSave: (project: Project) => Promise<boolean>;
   projectToEdit?: Project | null;
   allTeamMembers: TeamMember[];
   currentUser?: { id: string; name: string; role: string } | null;
@@ -217,13 +217,14 @@ export const BriefingModal: React.FC<BriefingModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: { [key: string]: string } = {};
 
     if (!name.trim()) newErrors.name = 'O nome do projeto/sede corporativa é obrigatório.';
     if (!client.trim()) newErrors.client = 'A razão social ou nome do cliente corporativo é obrigatório.';
     if (!entryDate) newErrors.entryDate = 'A data de entrada da demanda é obrigatória.';
+    if (!allTeamMembers.some(m=>m.id===headMemberId)) newErrors.headMemberId = 'Cadastre e selecione um responsável antes de salvar.';
     if (!folderUrl.trim()) newErrors.folderUrl = 'O link ou caminho da pasta de documentos é obrigatório.';
 
     if (Object.keys(newErrors).length > 0) {
@@ -291,14 +292,13 @@ export const BriefingModal: React.FC<BriefingModalProps> = ({
       entryDate,
       startDate: targetKickoffDate || entryDate,
       targetEndDate: targetEndDate || addDays(entryDate, 90),
-      teamMemberIds: Array.from(new Set(projectToEdit?.teamMemberIds || [headMemberId, 'team-soli'])).filter(Boolean),
+      teamMemberIds: Array.from(new Set(projectToEdit?.teamMemberIds || [headMemberId])).filter(Boolean),
       createdAt: projectToEdit?.createdAt || new Date().toISOString(),
       notes: commercialObservations.trim() || undefined,
       briefing: briefingPayload,
     };
 
-    onSave(updatedProject);
-    onClose();
+    if (await onSave(updatedProject)) onClose();
   };
 
   return (

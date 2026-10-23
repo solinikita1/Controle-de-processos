@@ -7,7 +7,7 @@ import { X, Building2, Calendar, Users, MapPin, DollarSign, AlertCircle, FileTex
 interface ProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (project: Project) => void;
+  onSave: (project: Project) => Promise<boolean>;
   projectToEdit?: Project | null;
   allTeamMembers: TeamMember[];
 }
@@ -84,7 +84,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: { [key: string]: string } = {};
 
@@ -128,8 +128,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
       notes: notes.trim() || undefined,
     };
 
-    onSave(updatedProject);
-    onClose();
+    if (await onSave(updatedProject)) onClose();
   };
 
   return (

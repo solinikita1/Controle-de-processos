@@ -7,7 +7,7 @@ import { X, Calendar, AlertCircle, CheckCircle2, User, Flag, Layers, Plus, Trash
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (task: Task) => void;
+  onSave: (task: Task) => Promise<boolean>;
   taskToEdit?: Task | null;
   projectId: string;
   projectTeam: TeamMember[];
@@ -99,7 +99,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: { [key: string]: string } = {};
 
@@ -142,8 +142,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    onSave(updatedTask);
-    onClose();
+    if (await onSave(updatedTask)) onClose();
   };
 
   // Combine project team members first, then other studio members
