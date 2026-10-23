@@ -1,37 +1,72 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128;
+    function corporate() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'microsoft.com'
+        && request.auth.token.email is string
+        && request.auth.token.email.lower().matches('.*@workplace[.]arq[.]br');
     }
-
-    match /projects/{projectId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(projectId);
+    function member() {
+      return corporate()
+        && exists(/databases/$(database)/documents/access/$(request.auth.uid))
+        && get(/databases/$(database)/documents/access/$(request.auth.uid)).data.enabled == true
+        && get(/databases/$(database)/documents/access/$(request.auth.uid)).data.role in ['admin', 'editor'];
     }
-
-    match /tasks/{taskId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(taskId);
+    function admin() {
+      return member() && get(/databases/$(database)/documents/access/$(request.auth.uid)).data.role == 'admin';
     }
-
-    match /teamMembers/{memberId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(memberId);
+    function previousRevision() {
+      return exists(/databases/$(database)/documents/system/revision)
+        ? get(/databases/$(database)/documents/system/revision).data.value : 0;
     }
-
-    match /backups/{backupId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(backupId);
+    function revised() {
+      return getAfter(/databases/$(database)/documents/system/revision).data.value == previousRevision() + 1
+        && getAfter(/databases/$(database)/documents/system/revision).data.updatedBy == request.auth.uid;
     }
-
-    match /test/{testId} {
-      allow read, write: if true;
+    function validId(id) { return id.size() > 0 && id.size() <= 128; }
+    function identity(id) { return validId(id) && request.resource.data.id == id; }
+    match /access/{uid} {
+      allow get: if corporate() && request.auth.uid == uid;
+      allow list, write: if false;
     }
-
-    match /{document=**} {
-      allow read, write: if false;
+    match /system/revision {
+      allow read: if member();
+      allow create, update: if member()
+        && request.resource.data.keys().hasOnly(['value','updatedBy','updatedAt'])
+        && request.resource.data.value is int
+        && request.resource.data.value == previousRevision() + 1
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
     }
+    match /projects/{id} {
+      allow read: if member();
+      allow create, update: if member() && revised() && identity(id)
+        && request.resource.data.name is string && request.resource.data.teamMemberIds is list
+        && request.resource.data.startDate is string && request.resource.data.targetEndDate is string;
+      allow delete: if member() && revised() && validId(id);
+    }
+    match /tasks/{id} {
+      allow read: if member();
+      allow create, update: if member() && revised() && identity(id)
+        && request.resource.data.title is string && request.resource.data.projectId is string
+        && request.resource.data.completed is bool
+        && request.resource.data.status in ['a_fazer','em_andamento','em_revisao','concluida'];
+      allow delete: if member() && revised() && validId(id);
+    }
+    match /teamMembers/{id} {
+      allow read: if member();
+      allow create, update: if admin() && revised() && identity(id)
+        && request.resource.data.name is string && request.resource.data.email is string;
+      allow delete: if admin() && revised() && validId(id);
+    }
+    match /backups/{id} {
+      allow read: if member();
+      allow create, update: if admin() && revised() && identity(id)
+        && request.resource.data.payload is map;
+      allow delete: if admin() && revised() && validId(id);
+    }
+    match /{document=**} { allow read, write: if false; }
   }
 }

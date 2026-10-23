@@ -136,6 +136,12 @@ export function checkDateStatus(endDateStr: string, isCompleted: boolean): DateS
   };
 }
 
+export function isValidDateString(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + 'T00:00:00Z');
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 export function validateDateRange(startDateStr: string, endDateStr: string): { isValid: boolean; error?: string } {
   if (!startDateStr || startDateStr.trim() === '') {
     return { isValid: false, error: 'A data de início é obrigatória.' };
@@ -143,7 +149,10 @@ export function validateDateRange(startDateStr: string, endDateStr: string): { i
   if (!endDateStr || endDateStr.trim() === '') {
     return { isValid: false, error: 'A data de fim é obrigatória.' };
   }
-  if (new Date(startDateStr) > new Date(endDateStr)) {
+  if (!isValidDateString(startDateStr) || !isValidDateString(endDateStr)) {
+    return { isValid: false, error: 'Informe datas válidas no formato AAAA-MM-DD.' };
+  }
+  if (startDateStr > endDateStr) {
     return { isValid: false, error: 'A data de término não pode ser anterior à data de início.' };
   }
   return { isValid: true };

@@ -1,20 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Project, Task, TeamMember, TaskStatus, AuthUser, ProjectAwardInfo, ArchitecturePhase, BackupSnapshot, BackupPayload } from './types';
 import {
-  loadStoredProjects,
   saveStoredProjects,
-  loadStoredTasks,
   saveStoredTasks,
-  loadStoredTeam,
   saveStoredTeam,
-  loadStoredAuthUser,
-  saveStoredAuthUser,
-  resetAllData,
   computeStudioStats,
   deduplicateById,
-  loadStoredBackups,
   saveStoredBackups,
   createBackupPayload,
+  validateBackupPayload,
+  downloadJsonFile,
 } from './utils/storage';
 import { Header } from './components/Header';
 import { DashboardOverview } from './components/DashboardOverview';
@@ -35,32 +30,24 @@ import { WorkplaceLogo } from './components/WorkplaceLogo';
 import { Sparkles } from 'lucide-react';
 import { exportProjectToCsv, exportProjectToJson, exportAllProjectsToCsv } from './utils/exportUtils';
 import {
-  testFirestoreConnection,
   subscribeToProjects,
   subscribeToTasks,
   subscribeToTeam,
   subscribeToBackups,
-  saveProjectToCloud,
-  deleteProjectFromCloud,
-  saveTaskToCloud,
-  deleteTaskFromCloud,
-  saveTeamMemberToCloud,
-  deleteTeamMemberFromCloud,
   saveBackupToCloud,
   deleteBackupFromCloud,
   restoreDataInCloudBatch,
-  seedInitialFirestoreData,
+  commitCloudChanges,
 } from './services/firebase';
+import { watchAuthorizedUser, signInWithMicrosoft, signOutMicrosoft } from './services/auth';
+import type { CloudChange } from './utils/restorePlan';
 
 export default function App() {
-  const [projects, setProjects] = useState<Project[]>(() => loadStoredProjects());
-  const [tasks, setTasks] = useState<Task[]>(() => loadStoredTasks());
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => loadStoredTeam());
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => loadStoredAuthUser());
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() => {
-    const init = loadStoredProjects();
-    return init[0]?.id || null;
-  });
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<'overview' | 'project' | 'team' | 'timeline' | 'my_tasks' | 'esteira' | 'reports'>('overview');
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
 
@@ -87,111 +74,87 @@ export default function App() {
 
   // Backup & Restore modal state
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
-  const [cloudBackups, setCloudBackups] = useState<BackupSnapshot[]>(() => loadStoredBackups());
+  const [cloudBackups, setCloudBackups] = useState<BackupSnapshot[]>([]);
 
   // Notification feedback banner
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
+  const [authError,setAuthError]=useState<string|null>(null);
+  const [isSaving,setIsSaving]=useState(false);
+  const [syncError,setSyncError]=useState<string|null>(null);
+  const mutation=useRef<{changes:CloudChange[];publish:(()=>void)[];messages:string[]}|null>(null);
+  const showToast=(msg:string)=>{
+    if(mutation.current) { mutation.current.messages.push(msg); return; }
     setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3500);
+  };
+  useEffect(()=>{
+    if(!toastMessage) return;
+    const timer=setTimeout(()=>setToastMessage(null),6000);
+    return ()=>clearTimeout(timer);
+  },[toastMessage]);
+  const publish=(fn:()=>void)=>{ if(mutation.current) mutation.current.publish.push(fn); else fn(); };
+  const saveProjectToCloud=(data:Project)=>mutation.current!.changes.push({collection:'projects',id:data.id,data});
+  const saveTaskToCloud=(data:Task)=>mutation.current!.changes.push({collection:'tasks',id:data.id,data});
+  const saveTeamMemberToCloud=(data:TeamMember)=>mutation.current!.changes.push({collection:'teamMembers',id:data.id,data});
+  const deleteProjectFromCloud=(id:string)=>mutation.current!.changes.push({collection:'projects',id});
+  const deleteTaskFromCloud=(id:string)=>mutation.current!.changes.push({collection:'tasks',id});
+  const withMutation=<A extends unknown[]>(work:(...args:A)=>void)=>async(...args:A):Promise<boolean>=>{
+    if(mutation.current || isSaving) return false;
+    if(!currentUser || !isCloudConnected) { showToast('Aguarde a conexão com o servidor antes de salvar.'); return false; }
+    const pending={changes:[] as CloudChange[],publish:[] as (()=>void)[],messages:[] as string[]};
+    mutation.current=pending; setIsSaving(true);
+    try {
+        work(...args);
+        await commitCloudChanges(pending.changes);
+        pending.publish.forEach(fn=>fn());
+        setToastMessage(pending.messages.at(-1) || (pending.changes.length?'Alterações salvas.':null));
+        return true;
+      } catch(error) {
+        setToastMessage('Não foi possível salvar. '+(error instanceof Error?error.message:'Tente novamente.'));
+        return false;
+      } finally { mutation.current=null; setIsSaving(false); }
   };
 
-  // Realtime Cloud Sync (Firebase Firestore)
-  useEffect(() => {
-    let unsubProjects: (() => void) | null = null;
-    let unsubTasks: (() => void) | null = null;
-    let unsubTeam: (() => void) | null = null;
-    let unsubBackups: (() => void) | null = null;
+  useEffect(()=>watchAuthorizedUser(user=>{
+    setCurrentUser(user); setAuthError(null);
+    setProjects([]); setTasks([]); setTeamMembers([]); setCloudBackups([]);
+    setIsCloudConnected(false);
+    if(user) setIsAuthModalOpen(false);
+  },error=>{setCurrentUser(null);setAuthError(error.message);}),[]);
 
-    testFirestoreConnection().then(async (online) => {
-      setIsCloudConnected(online);
-      if (online) {
-        // Seed cloud database if first initialization
-        const initialProjects = loadStoredProjects();
-        const initialTasks = loadStoredTasks();
-        const initialTeam = loadStoredTeam();
-        const initialBackup = loadStoredBackups()[0];
-        await seedInitialFirestoreData(initialProjects, initialTasks, initialTeam, initialBackup);
-
-        // Subscribe to real-time project updates across all machines
-        unsubProjects = subscribeToProjects((cloudProjects) => {
-          if (cloudProjects && cloudProjects.length > 0) {
-            const clean = deduplicateById(cloudProjects);
-            setProjects(clean);
-            saveStoredProjects(clean);
-          }
-        });
-
-        // Subscribe to real-time task updates
-        unsubTasks = subscribeToTasks((cloudTasks) => {
-          if (cloudTasks && cloudTasks.length > 0) {
-            const clean = deduplicateById(cloudTasks);
-            setTasks(clean);
-            saveStoredTasks(clean);
-          }
-        });
-
-        // Subscribe to real-time team updates
-        unsubTeam = subscribeToTeam((cloudTeam) => {
-          if (cloudTeam && cloudTeam.length > 0) {
-            const clean = deduplicateById(cloudTeam);
-            setTeamMembers(clean);
-            saveStoredTeam(clean);
-          }
-        });
-
-        // Subscribe to real-time backup points in cloud
-        unsubBackups = subscribeToBackups((cloudSnapshots) => {
-          if (cloudSnapshots) {
-            setCloudBackups(cloudSnapshots);
-            saveStoredBackups(cloudSnapshots);
-          }
-        });
-      }
-    });
-
-    return () => {
-      if (unsubProjects) unsubProjects();
-      if (unsubTasks) unsubTasks();
-      if (unsubTeam) unsubTeam();
-      if (unsubBackups) unsubBackups();
-    };
-  }, []);
+  useEffect(()=>{
+    if(!currentUser) return;
+    let active=true;
+    const ready=new Set<string>();
+    const confirmed=(key:string)=>{ if(active) { ready.add(key); if(ready.size===4) {setIsCloudConnected(true);setSyncError(null);} } };
+    const fail=(error:Error)=>{ if(active) {ready.clear();setIsCloudConnected(false);setSyncError('Sincronização indisponível: '+error.message);} };
+    const subscriptions=[
+      subscribeToProjects(items=>{if(active){setProjects(items);saveStoredProjects(items);confirmed('projects');}},fail),
+      subscribeToTasks(items=>{if(active){setTasks(items);saveStoredTasks(items);confirmed('tasks');}},fail),
+      subscribeToTeam(items=>{if(active){setTeamMembers(items);saveStoredTeam(items);confirmed('team');}},fail),
+      subscribeToBackups(items=>{if(active){setCloudBackups(items);saveStoredBackups(items);confirmed('backups');}},fail),
+    ];
+    return ()=>{active=false;subscriptions.forEach(unsubscribe=>unsubscribe());};
+  },[currentUser]);
 
   // Sync to storage
   const updateProjects = (newProjects: Project[]) => {
     const clean = deduplicateById(newProjects);
-    setProjects(clean);
-    saveStoredProjects(clean);
+    publish(()=>{setProjects(clean);saveStoredProjects(clean);});
   };
 
   const updateTasks = (newTasks: Task[]) => {
     const clean = deduplicateById(newTasks);
-    setTasks(clean);
-    saveStoredTasks(clean);
+    publish(()=>{setTasks(clean);saveStoredTasks(clean);});
   };
 
   const updateTeam = (newTeam: TeamMember[]) => {
     const clean = deduplicateById(newTeam);
-    setTeamMembers(clean);
-    saveStoredTeam(clean);
+    publish(()=>{setTeamMembers(clean);saveStoredTeam(clean);});
   };
 
-  // Auth Handlers
-  const handleLogin = (user: AuthUser) => {
-    setCurrentUser(user);
-    saveStoredAuthUser(user);
-    showToast(`Autenticado via Microsoft 365: Olá, ${user.name}!`);
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    saveStoredAuthUser(null);
-    showToast('Você encerrou a sessão corporativa.');
-  };
+  const handleLogin=async()=>{setAuthError(null);await signInWithMicrosoft();};
+  const handleLogout=async()=>{try {await signOutMicrosoft();}catch(error){setAuthError(error instanceof Error?error.message:'Falha ao sair.');}};
 
   // Currently active project
   const currentProject = projects.find((p) => p.id === selectedProjectId) || projects[0] || null;
@@ -210,7 +173,7 @@ export default function App() {
     setIsProjectModalOpen(true);
   };
 
-  const handleSaveProject = (projectData: Project) => {
+  const handleSaveProject = withMutation((projectData: Project) => {
     const exists = projects.some((p) => p.id === projectData.id);
     let nextProjects: Project[];
     if (exists) {
@@ -224,19 +187,19 @@ export default function App() {
     saveProjectToCloud(projectData);
     setSelectedProjectId(projectData.id);
     setCurrentView('project');
-  };
+  });
 
-  const handleUpdateProjectTeam = (updatedMemberIds: string[]) => {
+  const handleUpdateProjectTeam = withMutation((updatedMemberIds: string[]) => {
     if (!currentProject) return;
     const updatedProject = { ...currentProject, teamMemberIds: updatedMemberIds };
     const nextProjects = projects.map((p) => (p.id === currentProject.id ? updatedProject : p));
     updateProjects(nextProjects);
     saveProjectToCloud(updatedProject);
     showToast('Equipe do projeto atualizada.');
-  };
+  });
 
   // --- Handlers: Project Lifecycle (Monday.com: Delete, Archive, Duplicate) ---
-  const handleDeleteProject = (projectId: string) => {
+  const handleDeleteProject = withMutation((projectId: string) => {
     const projectToDelete = projects.find((p) => p.id === projectId);
     if (!projectToDelete) return;
 
@@ -262,9 +225,9 @@ export default function App() {
       }
       showToast(`Projeto "${projectToDelete.name}" excluído definitivamente.`);
     }
-  };
+  });
 
-  const handleToggleArchiveProject = (projectId: string, reason?: string) => {
+  const handleToggleArchiveProject = withMutation((projectId: string, reason?: string) => {
     const project = projects.find((p) => p.id === projectId);
     if (!project) return;
 
@@ -286,9 +249,9 @@ export default function App() {
         ? `Projeto "${project.code}" foi arquivado. Você pode consultá-lo em Relatórios ou reativá-lo a qualquer momento.`
         : `Projeto "${project.code}" foi reativado com sucesso no portfólio!`
     );
-  };
+  });
 
-  const handleDuplicateProject = (projectId: string) => {
+  const handleDuplicateProject = withMutation((projectId: string) => {
     const sourceProject = projects.find((p) => p.id === projectId);
     if (!sourceProject) return;
 
@@ -324,7 +287,7 @@ export default function App() {
     setSelectedProjectId(newId);
     setCurrentView('project');
     showToast(`Projeto duplicado com sucesso! ${duplicatedTasks.length} tarefas clonadas como template.`);
-  };
+  });
 
   // --- Handlers: Briefing & Esteira ---
   const handleOpenNewBriefing = () => {
@@ -337,7 +300,7 @@ export default function App() {
     setIsBriefingModalOpen(true);
   };
 
-  const handleSaveBriefing = (savedProject: Project) => {
+  const handleSaveBriefing = withMutation((savedProject: Project) => {
     const exists = projects.some((p) => p.id === savedProject.id);
     let nextProjects: Project[];
     if (exists) {
@@ -350,7 +313,7 @@ export default function App() {
     updateProjects(nextProjects);
     saveProjectToCloud(savedProject);
     setSelectedProjectId(savedProject.id);
-  };
+  });
 
   const handleAdvanceToNextPhase = (project: Project) => {
     // Sequência natural da esteira Workplace
@@ -375,7 +338,7 @@ export default function App() {
     handleAdvanceToPhase(project, nextPhase);
   };
 
-  const handleAdvanceToPhase = (project: Project, targetPhase: ArchitecturePhase) => {
+  const handleAdvanceToPhase = withMutation((project: Project, targetPhase: ArchitecturePhase) => {
     let pipelineStage: any = project.pipelineStage;
     if (targetPhase === 'criacao_conceitual' || targetPhase === 'criacao_orcamento') {
       pipelineStage = 'criacao_andamento';
@@ -411,7 +374,7 @@ export default function App() {
     };
 
     showToast(`Projeto "${project.code}" avançou para: ${phaseNames[targetPhase] || targetPhase}`);
-  };
+  });
 
   // --- Handlers: Award do Cliente (Compra do Projeto) ---
   const handleOpenAwardModal = (project: Project) => {
@@ -419,7 +382,7 @@ export default function App() {
     setIsAwardModalOpen(true);
   };
 
-  const handleAwardProject = (projectId: string, awardInfo: ProjectAwardInfo) => {
+  const handleAwardProject = withMutation((projectId: string, awardInfo: ProjectAwardInfo) => {
     const targetProject = projects.find((p) => p.id === projectId);
     if (!targetProject) return;
 
@@ -613,20 +576,20 @@ export default function App() {
       ? `R$ ${awardInfo.awardValueBRL.toLocaleString('pt-BR')}`
       : 'Valor Confirmado';
     showToast(`🏆 PROJETO COMPRADO! Award de ${formattedVal} registrado com sucesso. Segundo momento da esteira (Projeto Executivo) liberado!`);
-  };
+  });
 
-  const handleReorderProjects = (orderedProjects: Project[]) => {
+  const handleReorderProjects = withMutation((orderedProjects: Project[]) => {
     updateProjects(orderedProjects);
     orderedProjects.forEach((p) => saveProjectToCloud(p));
     showToast('Ordem da esteira atualizada.');
-  };
+  });
 
-  const handleUpdateProjectSingle = (updatedProject: Project) => {
+  const handleUpdateProjectSingle = withMutation((updatedProject: Project) => {
     const nextProjects = projects.map((p) => (p.id === updatedProject.id ? updatedProject : p));
     updateProjects(nextProjects);
     saveProjectToCloud(updatedProject);
     showToast(`Prioridade do projeto "${updatedProject.code}" atualizada.`);
-  };
+  });
 
   // --- Handlers: Tasks ---
   const handleOpenNewTask = () => {
@@ -639,7 +602,7 @@ export default function App() {
     setIsTaskModalOpen(true);
   };
 
-  const handleSaveTask = (taskData: Task) => {
+  const handleSaveTask = withMutation((taskData: Task) => {
     const exists = tasks.some((t) => t.id === taskData.id);
     let nextTasks: Task[];
     if (exists) {
@@ -651,18 +614,18 @@ export default function App() {
     }
     updateTasks(nextTasks);
     saveTaskToCloud(taskData);
-  };
+  });
 
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = withMutation((taskId: string) => {
     if (window.confirm('Tem certeza que deseja excluir esta tarefa técnica?')) {
       const nextTasks = tasks.filter((t) => t.id !== taskId);
       updateTasks(nextTasks);
       deleteTaskFromCloud(taskId);
       showToast('Tarefa excluída.');
     }
-  };
+  });
 
-  const handleToggleTaskComplete = (task: Task) => {
+  const handleToggleTaskComplete = withMutation((task: Task) => {
     const nextCompleted = !task.completed;
     const nextStatus: TaskStatus = nextCompleted ? 'concluida' : 'em_andamento';
 
@@ -677,9 +640,9 @@ export default function App() {
     updateTasks(nextTasks);
     saveTaskToCloud(updatedTask);
     showToast(nextCompleted ? `Tarefa "${task.title}" marcada como Concluída!` : `Tarefa marcada como Pendente.`);
-  };
+  });
 
-  const handleUpdateTaskStatus = (task: Task, newStatus: TaskStatus) => {
+  const handleUpdateTaskStatus = withMutation((task: Task, newStatus: TaskStatus) => {
     const nextCompleted = newStatus === 'concluida';
     const updatedTask: Task = {
       ...task,
@@ -690,9 +653,9 @@ export default function App() {
     const nextTasks = tasks.map((t) => (t.id === task.id ? updatedTask : t));
     updateTasks(nextTasks);
     saveTaskToCloud(updatedTask);
-  };
+  });
 
-  const handleUpdateTaskDates = (taskId: string, newStartDate: string, newEndDate: string) => {
+  const handleUpdateTaskDates = withMutation((taskId: string, newStartDate: string, newEndDate: string) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
     const updatedTask: Task = {
@@ -705,7 +668,7 @@ export default function App() {
     updateTasks(nextTasks);
     saveTaskToCloud(updatedTask);
     showToast(`Cronograma atualizado: "${task.title.slice(0, 28)}..." (${newStartDate} → ${newEndDate})`);
-  };
+  });
 
   // --- Handlers: Team ---
   const handleOpenNewTeamMember = () => {
@@ -718,7 +681,7 @@ export default function App() {
     setIsTeamModalOpen(true);
   };
 
-  const handleSaveTeamMember = (memberData: TeamMember) => {
+  const handleSaveTeamMember = withMutation((memberData: TeamMember) => {
     const exists = teamMembers.some((m) => m.id === memberData.id);
     let nextTeam: TeamMember[];
     if (exists) {
@@ -730,39 +693,12 @@ export default function App() {
     }
     updateTeam(nextTeam);
     saveTeamMemberToCloud(memberData);
-  };
+  });
 
   // --- Handlers: Reset & Export ---
-  const handleResetData = () => {
-    if (window.confirm('Deseja restaurar os dados padrão com os 20 colaboradores da Workplace e projetos corporativos?')) {
-      const reset = resetAllData();
-      setProjects(reset.projects);
-      setTasks(reset.tasks);
-      setTeamMembers(reset.team);
-      if (reset.projects.length > 0) {
-        setSelectedProjectId(reset.projects[0].id);
-      }
-      showToast('Dados restaurados com sucesso.');
-    }
-  };
-
   const handleExportData = () => {
-    const exportPayload = {
-      exportedAt: new Date().toISOString(),
-      studio: 'Workplace Arquitetura Corporativa',
-      authenticatedUser: currentUser,
-      projects,
-      tasks,
-      teamMembers,
-    };
-    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `workplace_arquitetura_backup_${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Backup exportado com sucesso.');
+    downloadJsonFile(createBackupPayload(projects,tasks,teamMembers,currentUser?.name), 'workplace_backup_'+new Date().toISOString().slice(0,10)+'.json');
+    showToast('Backup exportado.');
   };
 
   // --- Handlers: Central de Backup & Restauração ---
@@ -782,41 +718,22 @@ export default function App() {
       payload,
     };
 
-    const updated = [snapshot, ...cloudBackups.filter((b) => b.id !== snapshot.id)];
-    setCloudBackups(updated);
-    saveStoredBackups(updated);
-
-    if (isCloudConnected) {
-      await saveBackupToCloud(snapshot);
-    }
+    if(!isCloudConnected) throw new Error('Conecte ao servidor antes de salvar um backup na nuvem.');
+    await saveBackupToCloud(snapshot);
+    const updated=[snapshot,...cloudBackups.filter(b=>b.id!==snapshot.id)];
+    setCloudBackups(updated);saveStoredBackups(updated);
     showToast(`Ponto de restauração "${name}" salvo com sucesso!`);
   };
 
   const handleRestoreBackup = async (payload: BackupPayload, snapshotName: string) => {
-    const cleanProjects = deduplicateById(payload.projects).map((p) => ({
-      ...p,
-      teamMemberIds: Array.from(new Set((p.teamMemberIds || []).map((id: string) => id?.trim()))).filter(Boolean),
-    }));
-    const cleanTasks = deduplicateById(payload.tasks);
-    const cleanTeam = deduplicateById(payload.team);
-
-    setProjects(cleanProjects);
-    setTasks(cleanTasks);
-    setTeamMembers(cleanTeam);
-
-    saveStoredProjects(cleanProjects);
-    saveStoredTasks(cleanTasks);
-    saveStoredTeam(cleanTeam);
-
-    if (isCloudConnected) {
-      await restoreDataInCloudBatch({
-        ...payload,
-        projects: cleanProjects,
-        tasks: cleanTasks,
-        team: cleanTeam,
-      });
-    }
-
+    const validated=validateBackupPayload(payload);
+    if(!validated.valid || !validated.payload) throw new Error(validated.error);
+    if(!currentUser?.isDirector) throw new Error('A restauração exige uma conta de administração.');
+    if(!isCloudConnected) throw new Error('Conecte ao servidor antes de restaurar.');
+    await restoreDataInCloudBatch(validated.payload);
+    const {projects:cleanProjects,tasks:cleanTasks,team:cleanTeam}=validated.payload;
+    setProjects(cleanProjects);setTasks(cleanTasks);setTeamMembers(cleanTeam);
+    saveStoredProjects(cleanProjects);saveStoredTasks(cleanTasks);saveStoredTeam(cleanTeam);
     if (cleanProjects.length > 0) {
       setSelectedProjectId(cleanProjects[0].id);
     }
@@ -825,13 +742,10 @@ export default function App() {
   };
 
   const handleDeleteBackup = async (backupId: string) => {
-    const updated = cloudBackups.filter((b) => b.id !== backupId);
-    setCloudBackups(updated);
-    saveStoredBackups(updated);
-
-    if (isCloudConnected) {
-      await deleteBackupFromCloud(backupId);
-    }
+    if(!isCloudConnected) throw new Error('Conecte ao servidor antes de excluir um backup.');
+    await deleteBackupFromCloud(backupId);
+    const updated=cloudBackups.filter(b=>b.id!==backupId);
+    setCloudBackups(updated);saveStoredBackups(updated);
     showToast('Ponto de restauração removido.');
   };
 
@@ -846,6 +760,8 @@ export default function App() {
     ? teamMembers.filter((m) => currentProject.teamMemberIds.includes(m.id))
     : [];
 
+  if(!currentUser) return <MicrosoftLoginModal isOpen={true} onClose={()=>{}} currentUser={null} onLogin={handleLogin} onLogout={handleLogout} error={authError}/>;
+
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col text-neutral-900">
       
@@ -857,7 +773,6 @@ export default function App() {
         selectedProjectId={selectedProjectId}
         onSelectProject={handleSelectProject}
         onNewProject={handleOpenNewProject}
-        onResetData={handleResetData}
         onExportData={handleExportData}
         onOpenBackupModal={() => setIsBackupModalOpen(true)}
         currentUser={currentUser}
@@ -1031,7 +946,7 @@ export default function App() {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         currentUser={currentUser}
-        teamMembers={teamMembers}
+        error={authError}
         onLogin={handleLogin}
         onLogout={handleLogout}
       />
@@ -1104,6 +1019,8 @@ export default function App() {
         onDeleteBackup={handleDeleteBackup}
       />
 
+      {syncError && <div role="alert" className="fixed bottom-20 left-4 right-4 z-40 bg-rose-50 border border-rose-200 p-3 rounded text-rose-800 text-sm">{syncError}</div>}
+      {isSaving && <div role="status" className="fixed inset-0 z-[100] bg-white/70 flex items-center justify-center">Salvando alterações…</div>}
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-stone-900 text-white text-xs font-medium px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">

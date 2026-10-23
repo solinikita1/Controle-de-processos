@@ -10,7 +10,6 @@ interface HeaderProps {
   selectedProjectId: string | null;
   onSelectProject: (id: string) => void;
   onNewProject: () => void;
-  onResetData: () => void;
   onExportData: () => void;
   onOpenBackupModal: () => void;
   currentUser: AuthUser | null;
@@ -28,7 +27,6 @@ export const Header: React.FC<HeaderProps> = ({
   selectedProjectId,
   onSelectProject,
   onNewProject,
-  onResetData,
   onExportData,
   onOpenBackupModal,
   currentUser,
@@ -360,17 +358,6 @@ export const Header: React.FC<HeaderProps> = ({
             className="p-2 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
           >
             <Download className="w-4 h-4" />
-          </button>
-
-          {/* Reset sample demo */}
-          <button
-            type="button"
-            onClick={onResetData}
-            title="Restaurar dados padrão demonstrativos"
-            aria-label="Restaurar dados padrão demonstrativos"
-            className="p-2 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
           </button>
 
           {/* + Novo Projeto Button (only enabled for directors or coordinates, or opens modal) */}

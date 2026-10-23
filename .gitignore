@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+.test-build/
+firebase-debug.log
+firestore-debug.log
+
+.test-tools/

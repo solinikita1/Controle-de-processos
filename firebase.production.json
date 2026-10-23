@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-archofficegestod-541def0f-9bbe-4e3e-957b-19e4e78db516",
+      "rules": "firestore.rules"
+    }
+  ]
+}

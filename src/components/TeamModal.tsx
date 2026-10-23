@@ -5,7 +5,7 @@ import { X, UserPlus, Mail, Phone, Award, Briefcase, AlertCircle } from 'lucide-
 interface TeamModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (member: TeamMember) => void;
+  onSave: (member: TeamMember) => Promise<boolean>;
   memberToEdit?: TeamMember | null;
 }
 
@@ -64,7 +64,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({
     return parts[0]?.slice(0, 2).toUpperCase() || 'AR';
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: { [key: string]: string } = {};
 
@@ -87,8 +87,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({
       department,
     };
 
-    onSave(member);
-    onClose();
+    if (await onSave(member)) onClose();
   };
 
   return (
