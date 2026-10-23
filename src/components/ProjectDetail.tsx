@@ -1,3 +1,5 @@
+import {CreationStages} from './CreationStages';
+import {canonicalCreationPhase,creationStages} from '../utils/creationStages';
 import {ExecutiveRevisions} from './ExecutiveRevisions';
 import {areaForPhase,areaNames,firstPhase,tasksInArea,WorkArea} from '../utils/workAreas';
 import {CreationFlow} from './CreationFlow';
@@ -133,6 +135,8 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
 
   const areaTasks=useMemo(()=>tasksInArea(tasks,project.id,selectedArea),[tasks,project.id,selectedArea]);
 
+  const stageTasks=useMemo(()=>selectedArea==='criacao'&&selectedPhaseFilter!=='all'&&selectedPhaseFilter!=='criacao_all'?areaTasks.filter(t=>canonicalCreationPhase(t.phase)===canonicalCreationPhase(selectedPhaseFilter as ArchitecturePhase)):areaTasks,[areaTasks,selectedArea,selectedPhaseFilter]);
+
   // Project team members
   const projectTeam = useMemo(() => {
     return allTeamMembers.filter((m) => project.teamMemberIds.includes(m.id));
@@ -158,21 +162,21 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
 
   // Project completion calculation
   const areaStats = useMemo(() => {
-    const total = areaTasks.length;
-    const completed = areaTasks.filter((t) => t.completed || t.status === 'concluida').length;
+    const total = stageTasks.length;
+    const completed = stageTasks.filter((t) => t.completed || t.status === 'concluida').length;
     const pending = total - completed;
-    const overdue = areaTasks.filter((t) => {
+    const overdue = stageTasks.filter((t) => {
       if (t.completed || t.status === 'concluida') return false;
       return checkDateStatus(t.endDate, false).isOverdue;
     }).length;
-    const soon = areaTasks.filter((t) => {
+    const soon = stageTasks.filter((t) => {
       if (t.completed || t.status === 'concluida') return false;
       const s = checkDateStatus(t.endDate, false);
       return s.isSoon || s.isToday;
     }).length;
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { total, completed, pending, overdue, soon, percentage };
-  }, [areaTasks]);
+  }, [stageTasks]);
 
   // Filtered and sorted tasks for the list view
   const displayTasks = useMemo(() => {
@@ -225,7 +229,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
               task.phase === 'detalhamento' || 
               task.phase === 'projeto_legal';
             if (!isExec) return false;
-          } else if (task.phase !== selectedPhaseFilter) {
+          } else if ((selectedArea==='criacao'?canonicalCreationPhase(task.phase):task.phase) !== (selectedArea==='criacao'?canonicalCreationPhase(selectedPhaseFilter as ArchitecturePhase):selectedPhaseFilter)) {
             return false;
           }
         }
@@ -245,7 +249,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
         }
         return a.title.localeCompare(b.title);
       });
-  }, [areaTasks, searchQuery, selectedResponsible, selectedPriority, selectedStatusFilter, selectedPhaseFilter, sortBy]);
+  }, [areaTasks, selectedArea, searchQuery, selectedResponsible, selectedPriority, selectedStatusFilter, selectedPhaseFilter, sortBy]);
 
   const currentPhaseInfo = ARCHITECTURE_PHASES.find((p) => p.id === project.currentPhase);
   const projectDateStatus = checkDateStatus(project.targetEndDate, stats.percentage === 100);
@@ -488,7 +492,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
 
             <button
               type="button"
-              onClick={()=>onAddTask(firstPhase[selectedArea])}
+              onClick={()=>onAddTask(selectedPhaseFilter!=='all'&&selectedPhaseFilter!=='criacao_all'&&selectedPhaseFilter!=='executivo_all'?selectedPhaseFilter:firstPhase[selectedArea])}
               className="px-4 py-2 text-xs font-medium text-white bg-stone-900 hover:bg-stone-800 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
@@ -788,6 +792,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
             </div>
           )}
 
+          {selectedArea === 'criacao' && <CreationStages tasks={areaTasks} selected={selectedPhaseFilter} onSelect={phase=>{setSelectedPhaseFilter(phase);setSelectedStatusFilter('all');setSearchQuery('');}}/>}
           {selectedArea === 'criacao' && <CreationFlow key={project.id} project={project} team={allTeamMembers} actor={actor} onSave={onUpdateProject} onAward={project.award?.status !== 'awarded' && onOpenAwardModal ? ()=>onOpenAwardModal(project) : undefined} />}
 
           {/* BANNER C: PROJETO EXECUTIVO (Pós-Award - 4 Pilares Obrigatórios) */}
@@ -963,7 +968,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                 : 'border-transparent text-neutral-500 hover:text-neutral-900 hover:border-neutral-300'
             }`}
           >
-            Lista de Tarefas ({areaTasks.length})
+            Lista de Tarefas ({stageTasks.length})
           </button>
           <button
             type="button"
@@ -1076,7 +1081,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
         )}
       </div>
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2"><label className="text-sm font-semibold">Área do quadro <select aria-label="Área do quadro" value={selectedArea} onChange={e=>selectArea(e.target.value as WorkArea)} className="ml-2 p-2 rounded border bg-white">{Object.entries(areaNames).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><p className="text-sm">{areaNames[selectedArea]} · {areaTasks.length} tarefas. Navegar entre áreas não altera a fase do projeto.</p></div>
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2"><label className="text-sm font-semibold">Área do quadro <select aria-label="Área do quadro" value={selectedArea} onChange={e=>selectArea(e.target.value as WorkArea)} className="ml-2 p-2 rounded border bg-white">{Object.entries(areaNames).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><p className="text-sm">{areaNames[selectedArea]}{selectedArea==='criacao'&&selectedPhaseFilter!=='all'?' · '+(creationStages.find(s=>s.id===selectedPhaseFilter)?.title||''):''} · {stageTasks.length} tarefas. Navegar entre áreas não altera a fase do projeto.</p></div>
       {selectedArea==='executivo'&&<ExecutiveRevisions project={project} tasks={projectTasks} team={allTeamMembers} actor={actor} onSave={onUpdateProject}/>}
       {/* TAB 1: LISTA DE TAREFAS */}
       {activeTab === 'lista' && (
@@ -1103,7 +1108,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                 className="text-xs px-2.5 py-1.5 border border-neutral-200 rounded-lg bg-white text-neutral-800 font-semibold focus:outline-hidden"
               >
                 <option value="all">Todas as etapas desta área</option>
-                {ARCHITECTURE_PHASES.filter(p=>areaForPhase(p.id)===selectedArea).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                {selectedArea==='criacao'?creationStages.map(p=><option key={p.id} value={p.id}>{p.title}</option>):ARCHITECTURE_PHASES.filter(p=>areaForPhase(p.id)===selectedArea).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
 
               {/* Filter Responsible */}
@@ -1390,7 +1395,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
       {activeTab === 'cronograma' && (
         onUpdateTaskDates ? (
           <InteractiveD3Gantt
-            tasks={areaTasks}
+            tasks={stageTasks}
             projects={[project]}
             teamMembers={allTeamMembers}
             onEditTask={onEditTask}
@@ -1398,7 +1403,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
           />
         ) : (
           <GanttTimeline
-            tasks={areaTasks}
+            tasks={stageTasks}
             teamMembers={allTeamMembers}
             onEditTask={onEditTask}
             projectStartDate={project.startDate}

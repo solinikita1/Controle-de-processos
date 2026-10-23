@@ -11,7 +11,7 @@ export const ARCHITECTURE_PHASES: ArchitecturePhaseInfo[] = [
   },
   {
     id: 'criacao_conceitual',
-    name: '2.1 Criação: Projeto Conceitual',
+    name: '2.1 Criação: Desenvolvimento do Projeto',
     shortName: '2.1 Conceito',
     description: 'Área de Criação: desenvolvimento do projeto conceitual, layout espacial, volumetria 3D, salas acústicas e área wellness.',
     color: '#8B5CF6', // Roxo
@@ -19,7 +19,7 @@ export const ARCHITECTURE_PHASES: ArchitecturePhaseInfo[] = [
   },
   {
     id: 'criacao_orcamento',
-    name: '2.2 Criação: Orçamento do Cliente',
+    name: '2.2 Criação: Desenvolvimento do Orçamento',
     shortName: '2.2 Orçamento',
     description: 'Área de Criação: desenvolvimento da planilha orçamentária do cliente, estimativa de CAPEX da obra, marcenaria e complementares.',
     color: '#3B82F6', // Azul
@@ -27,7 +27,7 @@ export const ARCHITECTURE_PHASES: ArchitecturePhaseInfo[] = [
   },
   {
     id: 'criacao_apresentacao',
-    name: '2.3 Criação: Apresentação (Conceito + Orçamento)',
+    name: '2.3 Criação: Desenvolvimento da Apresentação',
     shortName: '2.3 Apresentação',
     description: 'Área de Criação: montagem e defesa da apresentação com os dois conteúdos (Conceito + Orçamento) para o cliente fechar o Award.',
     color: '#EAB308', // Dourado/Âmbar
