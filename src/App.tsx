@@ -260,6 +260,7 @@ export default function App() {
     const newCode = `${sourceProject.code}-CPY`;
     const duplicatedProject: Project = {
       ...sourceProject,
+      creationRounds: [],
       id: newId,
       code: newCode,
       name: `${sourceProject.name} (Cópia / Template)`,
