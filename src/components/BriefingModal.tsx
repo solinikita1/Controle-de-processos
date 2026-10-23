@@ -276,6 +276,7 @@ export const BriefingModal: React.FC<BriefingModalProps> = ({
     let updatedStatus = projectToEdit ? projectToEdit.status : ('briefing' as const);
 
     const updatedProject: Project = {
+      ...projectToEdit,
       id: projectToEdit ? projectToEdit.id : `proj-${Date.now()}`,
       code: projectToEdit ? projectToEdit.code : `CORP-2026-${String(Math.floor(Math.random() * 90) + 10)}`,
       name: name.trim(),

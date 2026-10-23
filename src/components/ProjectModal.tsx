@@ -105,6 +105,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     }
 
     const updatedProject: Project = {
+      ...projectToEdit,
       id: projectToEdit ? projectToEdit.id : `proj-${Date.now()}`,
       code: code.trim() || `CORP-${Date.now().toString().slice(-4)}`,
       name: name.trim(),
