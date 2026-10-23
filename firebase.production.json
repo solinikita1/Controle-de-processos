@@ -1,4 +1,11 @@
 {
+  "hosting": {
+    "site": "gen-lang-client-0862256022",
+    "public": "dist",
+    "ignore": ["firebase.production.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "headers": [{ "source": "/index.html", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }]
+  },
   "firestore": [
     {
       "database": "ai-studio-archofficegestod-541def0f-9bbe-4e3e-957b-19e4e78db516",
