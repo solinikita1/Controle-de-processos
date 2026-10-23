@@ -1,3 +1,4 @@
+import {creationRevisionTasks,syncCreationTask} from './utils/creationTasks';
 import { OperationsPanel } from './components/OperationsPanel';
 import React, { useState, useEffect, useRef } from 'react';
 import { Project, Task, TeamMember, TaskStatus, AuthUser, ProjectAwardInfo, ArchitecturePhase, BackupSnapshot, BackupPayload } from './types';
@@ -68,6 +69,7 @@ export default function App() {
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [newTaskPhase,setNewTaskPhase]=useState<ArchitecturePhase>('captacao_briefing');
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
 
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
@@ -261,6 +263,7 @@ export default function App() {
     const duplicatedProject: Project = {
       ...sourceProject,
       creationRounds: [],
+      executiveRevisions: [],
       id: newId,
       code: newCode,
       name: `${sourceProject.name} (Cópia / Template)`,
@@ -586,7 +589,10 @@ export default function App() {
     showToast('Ordem da esteira atualizada.');
   });
 
-  const handleUpdateProjectSingle = withMutation((updatedProject: Project) => {
+  const handleUpdateProjectSingle = withMutation((updatedProject: Project, revisionTask?:Task) => {
+    if(revisionTask){updateTasks([...tasks,revisionTask]);saveTaskToCloud(revisionTask);}
+    const linked=creationRevisionTasks(updatedProject,tasks);updatedProject=linked.project;
+    if(linked.changes.length){const ids=new Set(linked.changes.map(t=>t.id));updateTasks([...tasks.filter(t=>!ids.has(t.id)),...linked.changes,...(revisionTask?[revisionTask]:[])]);linked.changes.forEach(saveTaskToCloud);}
     const nextProjects = projects.map((p) => (p.id === updatedProject.id ? updatedProject : p));
     updateProjects(nextProjects);
     saveProjectToCloud(updatedProject);
@@ -594,7 +600,8 @@ export default function App() {
   });
 
   // --- Handlers: Tasks ---
-  const handleOpenNewTask = () => {
+  const handleOpenNewTask = (phase:ArchitecturePhase='captacao_briefing') => {
+    setNewTaskPhase(phase);
     setTaskToEdit(null);
     setIsTaskModalOpen(true);
   };
@@ -605,6 +612,7 @@ export default function App() {
     setIsTaskModalOpen(true);
   };
 
+  const syncLinkedCreation=(task:Task)=>{const p=projects.find(p=>p.id===task.projectId);if(!p)return;const next=syncCreationTask(p,task);if(next){updateProjects(projects.map(p=>p.id===next.id?next:p));saveProjectToCloud(next);}};
   const handleSaveTask = withMutation((taskData: Task) => {
     const exists = tasks.some((t) => t.id === taskData.id);
     let nextTasks: Task[];
@@ -617,9 +625,11 @@ export default function App() {
     }
     updateTasks(nextTasks);
     saveTaskToCloud(taskData);
+    syncLinkedCreation(taskData);
   });
 
   const handleDeleteTask = withMutation((taskId: string) => {
+    if(projects.some(p=>p.creationRounds?.some(r=>[r.projectWork,r.budgetWork].some(w=>w?.taskId===taskId))||p.executiveRevisions?.some(r=>r.taskId===taskId))){throw Error('Esta tarefa integra o histórico de uma revisão e não pode ser excluída.');}
     if (window.confirm('Tem certeza que deseja excluir esta tarefa técnica?')) {
       const nextTasks = tasks.filter((t) => t.id !== taskId);
       updateTasks(nextTasks);
@@ -642,6 +652,7 @@ export default function App() {
     const nextTasks = tasks.map((t) => (t.id === task.id ? updatedTask : t));
     updateTasks(nextTasks);
     saveTaskToCloud(updatedTask);
+    syncLinkedCreation(updatedTask);
     showToast(nextCompleted ? `Tarefa "${task.title}" marcada como Concluída!` : `Tarefa marcada como Pendente.`);
   });
 
@@ -656,6 +667,7 @@ export default function App() {
     const nextTasks = tasks.map((t) => (t.id === task.id ? updatedTask : t));
     updateTasks(nextTasks);
     saveTaskToCloud(updatedTask);
+    syncLinkedCreation(updatedTask);
   });
 
   const handleUpdateTaskDates = withMutation((taskId: string, newStartDate: string, newEndDate: string) => {
@@ -670,6 +682,7 @@ export default function App() {
     const nextTasks = tasks.map((t) => (t.id === taskId ? updatedTask : t));
     updateTasks(nextTasks);
     saveTaskToCloud(updatedTask);
+    syncLinkedCreation(updatedTask);
     showToast(`Cronograma atualizado: "${task.title.slice(0, 28)}..." (${newStartDate} → ${newEndDate})`);
   });
 
@@ -844,7 +857,7 @@ export default function App() {
 
         {/* VIEW 4: PROJECT DETAIL */}
         {currentView === 'project' && currentProject && (
-          <ProjectDetail
+          <ProjectDetail key={currentProject.id}
             onUpdateProject={handleUpdateProjectSingle}
             actor={currentUser.email}
             project={currentProject}
@@ -983,6 +996,7 @@ export default function App() {
           onClose={() => setIsTaskModalOpen(false)}
           onSave={handleSaveTask}
           taskToEdit={taskToEdit}
+          initialPhase={newTaskPhase}
           projectId={currentProject.id}
           projectTeam={currentProjectTeam}
           allTeamMembers={teamMembers}

@@ -167,6 +167,7 @@ export interface Task {
 }
 
 export interface Project {
+  executiveRevisions?: ExecutiveRevision[];
   creationRounds?: CreationRound[];
   id: string;
   code: string; // Ex: "ARC-2026-08"
@@ -230,6 +231,11 @@ export interface BackupSnapshot {
   payload: BackupPayload;
 }
 
-export interface CreationWork { responsibleId: string; dueDate: string; done: boolean; }
+export interface CreationWork { taskId?:string; responsibleId: string; dueDate: string; done: boolean; }
 export interface CreationEvent { id: string; at: string; by: string; action: string; date: string; note: string; link: string; recipient: string; followUp: string; }
 export interface CreationRound { number: number; scope: 'initial'|'project'|'budget'|'both'; request: string; state: 'draft'|'ready'|'presented'|'waiting'|'approved'|'closed'; projectWork?: CreationWork; budgetWork?: CreationWork; events: CreationEvent[]; }
+export interface ExecutiveRevision {
+ number:number; phase:ArchitecturePhase; request:string; responsibleId:string; dueDate:string; taskId:string;
+ state:'working'|'waiting'|'approved'|'superseded'; createdAt:string; createdBy:string;
+ events: {action:'send'|'approve';date:string;by:string;note:string;recipient:string;link:string}[];
+}

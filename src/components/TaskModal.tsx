@@ -9,6 +9,7 @@ interface TaskModalProps {
   onClose: () => void;
   onSave: (task: Task) => Promise<boolean>;
   taskToEdit?: Task | null;
+  initialPhase?: ArchitecturePhase;
   projectId: string;
   projectTeam: TeamMember[];
   allTeamMembers: TeamMember[];
@@ -19,6 +20,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   onClose,
   onSave,
   taskToEdit,
+  initialPhase='captacao_briefing',
   projectId,
   projectTeam,
   allTeamMembers,
@@ -56,7 +58,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       const today = getTodayDateString();
       setTitle('');
       setDescription('');
-      setPhase('projeto_executivo');
+      setPhase(initialPhase);
       setResponsibleId(projectTeam.length > 0 ? projectTeam[0].id : (allTeamMembers[0]?.id || ''));
       setStartDate(today);
       setEndDate(today);
@@ -67,7 +69,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setChecklist([]);
       setErrors({});
     }
-  }, [taskToEdit, isOpen, projectTeam, allTeamMembers]);
+  }, [taskToEdit, isOpen, projectTeam, allTeamMembers, initialPhase]);
 
   if (!isOpen) return null;
 

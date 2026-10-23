@@ -1,3 +1,5 @@
+import {ExecutiveRevisions} from './ExecutiveRevisions';
+import {areaForPhase,areaNames,firstPhase,tasksInArea,WorkArea} from '../utils/workAreas';
 import {CreationFlow} from './CreationFlow';
 import React, { useState, useMemo } from 'react';
 import { Project, Task, TeamMember, TaskPriority, TaskStatus, ArchitecturePhase } from '../types';
@@ -64,7 +66,7 @@ interface ProjectDetailProps {
   project: Project;
   tasks: Task[];
   allTeamMembers: TeamMember[];
-  onAddTask: () => void;
+  onAddTask: (phase?: ArchitecturePhase) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
   onToggleTaskComplete: (task: Task) => void;
@@ -75,7 +77,7 @@ interface ProjectDetailProps {
   onEditBriefing?: (project: Project) => void;
   onAdvanceToNextPhase?: (project: Project) => void;
   onAdvanceToPhase?: (project: Project, phase: ArchitecturePhase) => void;
-  onUpdateProject: (project: Project) => Promise<boolean>;
+  onUpdateProject: (project: Project, task?:Task) => Promise<boolean>;
   actor: string;
   onOpenAwardModal?: (project: Project) => void;
   onDeleteProject?: (projectId: string) => void;
@@ -111,6 +113,8 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
   onExportProjectCsv,
   onExportProjectJson,
 }) => {
+  const [selectedArea,setSelectedArea]=useState<WorkArea>(areaForPhase(project.currentPhase));
+  const selectArea=(area:WorkArea)=>{setSelectedArea(area);setSelectedPhaseFilter('all');setSelectedStatusFilter('all');setSearchQuery('');};
   const [activeTab, setActiveTab] = useState<TabType>('lista');
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
@@ -126,6 +130,8 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
   const projectTasks = useMemo(() => {
     return tasks.filter((t) => t.projectId === project.id);
   }, [tasks, project.id]);
+
+  const areaTasks=useMemo(()=>tasksInArea(tasks,project.id,selectedArea),[tasks,project.id,selectedArea]);
 
   // Project team members
   const projectTeam = useMemo(() => {
@@ -150,9 +156,27 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
     return { total, completed, pending, overdue, soon, percentage };
   }, [projectTasks]);
 
+  // Project completion calculation
+  const areaStats = useMemo(() => {
+    const total = areaTasks.length;
+    const completed = areaTasks.filter((t) => t.completed || t.status === 'concluida').length;
+    const pending = total - completed;
+    const overdue = areaTasks.filter((t) => {
+      if (t.completed || t.status === 'concluida') return false;
+      return checkDateStatus(t.endDate, false).isOverdue;
+    }).length;
+    const soon = areaTasks.filter((t) => {
+      if (t.completed || t.status === 'concluida') return false;
+      const s = checkDateStatus(t.endDate, false);
+      return s.isSoon || s.isToday;
+    }).length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { total, completed, pending, overdue, soon, percentage };
+  }, [areaTasks]);
+
   // Filtered and sorted tasks for the list view
   const displayTasks = useMemo(() => {
-    return projectTasks
+    return areaTasks
       .filter((task) => {
         // Search
         if (searchQuery.trim()) {
@@ -183,6 +207,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
           if (task.completed || task.status === 'concluida') return false;
           return checkDateStatus(task.endDate, false).isOverdue;
         }
+        if(selectedStatusFilter==='proximas'){const d=checkDateStatus(task.endDate,false);if(task.completed||task.status==='concluida'||!(d.isSoon||d.isToday))return false;}
         // Phase filter
         if (selectedPhaseFilter !== 'all') {
           if (selectedPhaseFilter === 'criacao_all') {
@@ -220,7 +245,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
         }
         return a.title.localeCompare(b.title);
       });
-  }, [projectTasks, searchQuery, selectedResponsible, selectedPriority, selectedStatusFilter, sortBy]);
+  }, [areaTasks, searchQuery, selectedResponsible, selectedPriority, selectedStatusFilter, selectedPhaseFilter, sortBy]);
 
   const currentPhaseInfo = ARCHITECTURE_PHASES.find((p) => p.id === project.currentPhase);
   const projectDateStatus = checkDateStatus(project.targetEndDate, stats.percentage === 100);
@@ -463,7 +488,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
 
             <button
               type="button"
-              onClick={onAddTask}
+              onClick={()=>onAddTask(firstPhase[selectedArea])}
               className="px-4 py-2 text-xs font-medium text-white bg-stone-900 hover:bg-stone-800 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
@@ -588,11 +613,11 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
             
             {/* Step 1: Captação & Encaixe na Esteira */}
             {(() => {
-              const isCurrent = project.currentPhase === 'captacao_briefing';
+              const isCurrent = selectedArea === 'captacao';
               const isDone = project.currentPhase !== 'captacao_briefing';
               return (
                 <div
-                  onClick={() => onAdvanceToPhase && onAdvanceToPhase(project, 'captacao_briefing')}
+                  role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' ')selectArea('captacao')}} onClick={() => selectArea('captacao')}
                   className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
                     isCurrent
                       ? 'bg-pink-50 border-pink-400 ring-2 ring-pink-300 shadow-xs'
@@ -617,12 +642,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
 
             {/* Step 2: Área de Criação (3 Etapas Pré-Award) */}
             {(() => {
-              const isCriacao =
-                project.currentPhase === 'criacao_conceitual' ||
-                project.currentPhase === 'criacao_orcamento' ||
-                project.currentPhase === 'criacao_apresentacao' ||
-                project.currentPhase === 'estudo_preliminar' ||
-                project.currentPhase === 'anteprojeto';
+              const isCriacao = selectedArea === 'criacao';
               const isPastCriacao =
                 project.currentPhase.startsWith('executivo_') ||
                 project.currentPhase === 'acompanhamento_obra' ||
@@ -630,7 +650,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                 project.currentPhase === 'detalhamento';
               return (
                 <div
-                  onClick={() => onAdvanceToPhase && onAdvanceToPhase(project, 'criacao_conceitual')}
+                  role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' ')selectArea('criacao')}} onClick={() => selectArea('criacao')}
                   className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
                     isCriacao
                       ? 'bg-purple-50 border-purple-400 ring-2 ring-purple-300 shadow-xs'
@@ -689,15 +709,11 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
 
             {/* Step 4: Segundo Momento: Projeto Executivo (4 Pilares) */}
             {(() => {
-              const isExec =
-                project.currentPhase.startsWith('executivo_') ||
-                project.currentPhase === 'projeto_executivo' ||
-                project.currentPhase === 'detalhamento' ||
-                project.currentPhase === 'projeto_legal';
+              const isExec = selectedArea === 'executivo';
               const isObra = project.currentPhase === 'acompanhamento_obra';
               return (
                 <div
-                  onClick={() => onAdvanceToPhase && onAdvanceToPhase(project, 'executivo_plantas')}
+                  role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' ')selectArea('executivo')}} onClick={() => selectArea('executivo')}
                   className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
                     isExec
                       ? 'bg-sky-50 border-sky-400 ring-2 ring-sky-300 shadow-xs'
@@ -725,7 +741,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
           {/* DYNAMIC CONTEXT BANNER ACCORDING TO CURRENT STAGE */}
           
           {/* BANNER A: Captação & Esteira */}
-          {project.currentPhase === 'captacao_briefing' && (
+          {selectedArea === 'captacao' && (
             <div className="p-4 rounded-xl bg-pink-50 border border-pink-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-pink-600 text-white rounded-xl shadow-xs shrink-0">
@@ -742,7 +758,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                   </div>
                   <p className="text-[11px] text-pink-800 mt-0.5">
                     {project.briefing?.submittedByName
-                      ? `Demanda registrada por ${project.briefing.submittedByName} em ${project.briefing.submittedAt}. Pasta SharePoint configurada.`
+                      ? `Demanda registrada por ${project.briefing.submittedByName} em ${project.briefing.submittedAt}. ${project.briefing.documentsFolderUrl?'Pasta de documentos configurada.':'Pasta de documentos ainda não informada.'}`
                       : 'Demanda aguardando preenchimento do briefing corporativo.'}
                   </p>
                 </div>
@@ -758,7 +774,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                     Editar Briefing
                   </button>
                 )}
-                {onAdvanceToPhase && (
+                {onAdvanceToPhase && project.currentPhase==='captacao_briefing' && (
                   <button
                     type="button"
                     onClick={() => onAdvanceToPhase(project, 'criacao_conceitual')}
@@ -772,14 +788,10 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
             </div>
           )}
 
-          {(project.creationRounds?.length || ['criacao_conceitual','criacao_orcamento','criacao_apresentacao','estudo_preliminar','anteprojeto'].includes(project.currentPhase)) && <CreationFlow key={project.id} project={project} team={allTeamMembers} actor={actor} onSave={onUpdateProject} onAward={project.award?.status !== 'awarded' && onOpenAwardModal ? ()=>onOpenAwardModal(project) : undefined} />}
+          {selectedArea === 'criacao' && <CreationFlow key={project.id} project={project} team={allTeamMembers} actor={actor} onSave={onUpdateProject} onAward={project.award?.status !== 'awarded' && onOpenAwardModal ? ()=>onOpenAwardModal(project) : undefined} />}
 
           {/* BANNER C: PROJETO EXECUTIVO (Pós-Award - 4 Pilares Obrigatórios) */}
-          {(project.award?.status === 'awarded' ||
-            project.currentPhase.startsWith('executivo_') ||
-            project.currentPhase === 'projeto_executivo' ||
-            project.currentPhase === 'detalhamento' ||
-            project.currentPhase === 'projeto_legal') && (
+          {selectedArea === 'executivo' && (
             <div className="p-4 rounded-xl bg-linear-to-r from-sky-50 via-cyan-50 to-emerald-50 border border-sky-300 flex flex-col gap-3">
               
               {/* Award Recognition Header */}
@@ -791,7 +803,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-600 text-white">
-                        ✓ PROJETO COMPRADO PELO CLIENTE (AWARD)
+                        {project.award?.status==='awarded'?'✓ PROJETO COMPRADO PELO CLIENTE (AWARD)':'ÁREA DO PROJETO EXECUTIVO'}
                       </span>
                       {project.award?.awardValueBRL && (
                         <span className="text-xs font-mono font-bold text-neutral-900 bg-white px-2 py-0.5 rounded-md border border-neutral-300">
@@ -802,9 +814,9 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                     <div className="text-xs text-neutral-700 mt-0.5">
                       {project.award?.clientDecisionMaker
                         ? `Award concedido por ${project.award.clientDecisionMaker} ${project.award.awardedAt ? `em ${project.award.awardedAt}` : ''}.`
-                        : 'Award confirmado! Segundo momento da esteira ativado.'}{' '}
+                        : (project.award?.status==='awarded'?'Award confirmado.':'Award ainda não registrado.')}{' '}
                       <span className="font-semibold text-sky-900">
-                        Liberado para Projeto Executivo completo.
+                        {project.award?.status==='awarded'?'Projeto Executivo liberado.':'Área de planejamento executivo.'}
                       </span>
                     </div>
                   </div>
@@ -820,7 +832,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                       Editar Dados do Award
                     </button>
                   )}
-                  {onAdvanceToPhase && (
+                  {onAdvanceToPhase && areaForPhase(project.currentPhase)==='executivo' && (
                     <button
                       type="button"
                       onClick={() => onAdvanceToPhase(project, 'acompanhamento_obra')}
@@ -951,7 +963,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                 : 'border-transparent text-neutral-500 hover:text-neutral-900 hover:border-neutral-300'
             }`}
           >
-            Lista de Tarefas ({projectTasks.length})
+            Lista de Tarefas ({areaTasks.length})
           </button>
           <button
             type="button"
@@ -1024,7 +1036,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                   selectedStatusFilter === 'pendentes' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600'
                 }`}
               >
-                Pendentes ({stats.pending})
+                Pendentes ({areaStats.pending})
               </button>
               <button
                 type="button"
@@ -1033,9 +1045,9 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                   selectedStatusFilter === 'concluidas' ? 'bg-white text-emerald-800 shadow-xs' : 'text-neutral-600'
                 }`}
               >
-                Já Fez ({stats.completed})
+                Já Fez ({areaStats.completed})
               </button>
-              {stats.soon > 0 && (
+              {areaStats.soon > 0 && (
                 <button
                   type="button"
                   onClick={() => setSelectedStatusFilter('proximas')}
@@ -1044,10 +1056,10 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                   }`}
                 >
                   <AlertCircle className="w-3 h-3 text-amber-600" />
-                  Próximas ({stats.soon})
+                  Próximas ({areaStats.soon})
                 </button>
               )}
-              {stats.overdue > 0 && (
+              {areaStats.overdue > 0 && (
                 <button
                   type="button"
                   onClick={() => setSelectedStatusFilter('atrasadas')}
@@ -1056,7 +1068,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                   }`}
                 >
                   <AlertTriangle className="w-3 h-3 text-rose-600" />
-                  Atrasadas ({stats.overdue})
+                  Atrasadas ({areaStats.overdue})
                 </button>
               )}
             </div>
@@ -1064,6 +1076,8 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
         )}
       </div>
 
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2"><label className="text-sm font-semibold">Área do quadro <select aria-label="Área do quadro" value={selectedArea} onChange={e=>selectArea(e.target.value as WorkArea)} className="ml-2 p-2 rounded border bg-white">{Object.entries(areaNames).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><p className="text-sm">{areaNames[selectedArea]} · {areaTasks.length} tarefas. Navegar entre áreas não altera a fase do projeto.</p></div>
+      {selectedArea==='executivo'&&<ExecutiveRevisions project={project} tasks={projectTasks} team={allTeamMembers} actor={actor} onSave={onUpdateProject}/>}
       {/* TAB 1: LISTA DE TAREFAS */}
       {activeTab === 'lista' && (
         <div className="space-y-4">
@@ -1088,24 +1102,8 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
                 onChange={(e) => setSelectedPhaseFilter(e.target.value as any)}
                 className="text-xs px-2.5 py-1.5 border border-neutral-200 rounded-lg bg-white text-neutral-800 font-semibold focus:outline-hidden"
               >
-                <option value="all">Todas as Fases da Esteira</option>
-                <optgroup label="2. Área de Criação (Pré-Award)">
-                  <option value="criacao_all">Toda Área de Criação (3 Etapas)</option>
-                  <option value="criacao_conceitual">2.1 Projeto Conceitual</option>
-                  <option value="criacao_orcamento">2.2 Orçamento do Cliente</option>
-                  <option value="criacao_apresentacao">2.3 Apresentação (Conceito + Orçamento)</option>
-                </optgroup>
-                <optgroup label="3. Projeto Executivo (Pós-Award)">
-                  <option value="executivo_all">Todo Projeto Executivo (4 Pilares)</option>
-                  <option value="executivo_plantas">3.1 Todas as Plantas</option>
-                  <option value="executivo_complementares">3.2 Complementares (Engenharias)</option>
-                  <option value="executivo_aprovacao_condominio">3.3 Aprovação no Condomínio</option>
-                  <option value="executivo_seguros_documentos">3.4 Seguros & Docs Obrigatórios</option>
-                </optgroup>
-                <optgroup label="Outras Fases">
-                  <option value="captacao_briefing">1. Captação & Encaixe na Esteira</option>
-                  <option value="acompanhamento_obra">4. Implantação e Obra</option>
-                </optgroup>
+                <option value="all">Todas as etapas desta área</option>
+                {ARCHITECTURE_PHASES.filter(p=>areaForPhase(p.id)===selectedArea).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
 
               {/* Filter Responsible */}
@@ -1357,16 +1355,16 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
             {/* Table Footer */}
             <div className="p-3 bg-stone-50/70 border-t border-neutral-200 flex items-center justify-between text-xs text-neutral-500">
               <span className="font-mono tabular-nums">
-                Mostrando {displayTasks.length} de {projectTasks.length} tarefas
+                Mostrando {displayTasks.length} de {areaTasks.length} tarefas
               </span>
               <div className="flex items-center gap-3">
-                <span className="text-emerald-700 font-medium">{stats.completed} concluídas</span>
+                <span className="text-emerald-700 font-medium">{areaStats.completed} concluídas</span>
                 <span>·</span>
-                <span className="text-neutral-700">{stats.pending} a fazer</span>
-                {stats.overdue > 0 && (
+                <span className="text-neutral-700">{areaStats.pending} a fazer</span>
+                {areaStats.overdue > 0 && (
                   <>
                     <span>·</span>
-                    <span className="text-rose-600 font-semibold">{stats.overdue} atrasadas</span>
+                    <span className="text-rose-600 font-semibold">{areaStats.overdue} atrasadas</span>
                   </>
                 )}
               </div>
@@ -1392,7 +1390,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
       {activeTab === 'cronograma' && (
         onUpdateTaskDates ? (
           <InteractiveD3Gantt
-            tasks={projectTasks}
+            tasks={areaTasks}
             projects={[project]}
             teamMembers={allTeamMembers}
             onEditTask={onEditTask}
@@ -1400,7 +1398,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
           />
         ) : (
           <GanttTimeline
-            tasks={projectTasks}
+            tasks={areaTasks}
             teamMembers={allTeamMembers}
             onEditTask={onEditTask}
             projectStartDate={project.startDate}
