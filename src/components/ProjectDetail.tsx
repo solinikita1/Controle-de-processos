@@ -234,7 +234,7 @@ export const ProjectDetail: React.FC<ProjectDetailProps> = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    setIsPdfModalOpen(true);
   };
 
   return (

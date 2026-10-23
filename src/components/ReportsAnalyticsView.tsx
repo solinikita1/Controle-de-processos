@@ -1,3 +1,4 @@
+import { generateStudioPdf } from '../utils/pdfGenerator';
 import React, { useState } from 'react';
 import { Project, Task, TeamMember, StudioStats } from '../types';
 import { ARCHITECTURE_PHASES } from '../data/mockData';
@@ -52,7 +53,7 @@ export const ReportsAnalyticsView: React.FC<ReportsAnalyticsViewProps> = ({
   });
 
   const handlePrint = () => {
-    window.print();
+    generateStudioPdf(filteredProjects, tasks, teamMembers, filterStatus).save('Workplace_Relatorio_Consolidado.pdf');
   };
 
   const handleExportCsv = () => {
@@ -124,7 +125,7 @@ export const ReportsAnalyticsView: React.FC<ReportsAnalyticsViewProps> = ({
             className="px-3.5 py-2 text-xs font-bold text-stone-900 bg-white hover:bg-neutral-50 border border-neutral-300 rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
           >
             <Printer className="w-4 h-4 text-neutral-700" />
-            <span>Imprimir / Salvar PDF</span>
+            <span>Exportar relatório PDF</span>
           </button>
         </div>
       </div>
