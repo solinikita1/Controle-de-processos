@@ -182,6 +182,9 @@ export const TeamModal: React.FC<TeamModalProps> = ({
                 <option value="Comercial">Comercial</option>
                 <option value="Operações">Operações & Engenharia</option>
                 <option value="Financeiro">Financeiro</option>
+                <option value="Orçamento">Orçamento</option>
+                <option value="Criação">Criação</option>
+                <option value="Executivo">Executivo</option>
                 <option value="Projetos">Projetos & Arquitetura</option>
               </select>
             </div>

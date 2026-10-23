@@ -1,3 +1,5 @@
+import {TeamOptions} from './TeamOptions';
+import {membersForPhase} from '../utils/teamAreas';
 import React, { useState, useEffect } from 'react';
 import { Task, TaskPriority, TaskStatus, ArchitecturePhase, TeamMember } from '../types';
 import { ARCHITECTURE_PHASES } from '../data/mockData';
@@ -59,7 +61,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setTitle('');
       setDescription('');
       setPhase(initialPhase);
-      setResponsibleId(projectTeam.length > 0 ? projectTeam[0].id : (allTeamMembers[0]?.id || ''));
+      setResponsibleId(membersForPhase([...projectTeam,...allTeamMembers.filter(m=>!projectTeam.some(p=>p.id===m.id))],initialPhase)[0]?.id||'');
       setStartDate(today);
       setEndDate(today);
       setPriority('media');
@@ -222,11 +224,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   }`}
                 >
                   <option value="">Selecione o profissional...</option>
-                  {availableMembers.map((m, idx) => (
-                    <option key={`task-member-${m.id}-${idx}`} value={m.id}>
-                      {m.name} — {m.role}
-                    </option>
-                  ))}
+                  <TeamOptions members={availableMembers} phase={phase}/>
                 </select>
                 <User className="absolute right-3 top-2.5 w-4 h-4 text-neutral-400 pointer-events-none" />
               </div>

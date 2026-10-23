@@ -22,7 +22,7 @@ export const TeamDirectory: React.FC<TeamDirectoryProps> = ({
   const [selectedDept, setSelectedDept] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const departments = ['all', 'Diretoria', 'Operações', 'Negócios', 'Comercial', 'Financeiro', 'Projetos'];
+  const departments = ['all', 'Diretoria', 'Operações', 'Negócios', 'Comercial', 'Financeiro', 'Projetos', 'Orçamento', 'Criação', 'Executivo'];
 
   const filteredMembers = useMemo<TeamMember[]>(() => {
     const list = teamMembers.filter((m) => {
